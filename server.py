@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-# This file is part of the Python aiocoap library project.
-#
 # Copyright (c) 2012-2014 Maciej Wasilak <http://sixpinetrees.blogspot.com/>,
 #               2013-2014 Christian Amsüss <c.amsuess@energyharvesting.at>
 #
@@ -15,7 +13,6 @@ import asyncio
 
 import aiocoap.resource as resource
 import aiocoap
-
 
 class BlockResource(resource.Resource):
     """
@@ -90,6 +87,37 @@ class TimeResource(resource.ObservableResource):
         payload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M").encode('ascii')
         return aiocoap.Message(code=aiocoap.CONTENT, payload=payload)
 
+class StoreResource(resource.ObservableResource):
+    """
+    Example resource that can be updated via PUT or POST and is observable.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self._mydata = "nothing here yet".encode('ascii')
+        self.notify()
+
+    def notify(self):
+        self.updated_state()
+
+    def update_observation_count(self, count):
+        if count:
+            # not that it's actually implemented like that here -- unconditional updating works just as well
+            print("Keeping the clock nearby to trigger observations")
+        else:
+            print("Stowing away the clock until someone asks again")
+
+    @asyncio.coroutine
+    def render_get(self, request):
+        payload = self._mydata
+        return aiocoap.Message(code=aiocoap.CONTENT, payload=payload)
+
+    @asyncio.coroutine
+    def render_post(self, request):
+        self._mydata = request.payload
+        payload = "POST OK".encode('ascii')
+        return aiocoap.Message(code=aiocoap.CONTENT, payload=payload)
+
 #class CoreResource(resource.Resource):
 #    """
 #    Example Resource that provides list of links hosted by a server.
@@ -128,6 +156,8 @@ def main():
     root.add_resource(('other', 'block'), BlockResource())
 
     root.add_resource(('other', 'separate'), SeparateLargeResource())
+
+    root.add_resource(('other', 'store'), StoreResource())
 
     asyncio.async(aiocoap.Context.create_server_context(root))
 

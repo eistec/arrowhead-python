@@ -14,6 +14,8 @@ import asyncio
 import aiocoap.resource as resource
 import aiocoap
 
+from arrowhead.core.servicediscovery.coap import ServiceResource
+
 class BlockResource(resource.Resource):
     """
     Example resource which supports GET and PUT methods. It sends large
@@ -87,37 +89,6 @@ class TimeResource(resource.ObservableResource):
         payload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M").encode('ascii')
         return aiocoap.Message(code=aiocoap.CONTENT, payload=payload)
 
-class StoreResource(resource.ObservableResource):
-    """
-    Example resource that can be updated via PUT or POST and is observable.
-    """
-    def __init__(self):
-        super().__init__()
-
-        self._mydata = "nothing here yet".encode('ascii')
-        self.notify()
-
-    def notify(self):
-        self.updated_state()
-
-    def update_observation_count(self, count):
-        if count:
-            # not that it's actually implemented like that here -- unconditional updating works just as well
-            print("Keeping the clock nearby to trigger observations")
-        else:
-            print("Stowing away the clock until someone asks again")
-
-    @asyncio.coroutine
-    def render_get(self, request):
-        payload = self._mydata
-        return aiocoap.Message(code=aiocoap.CONTENT, payload=payload)
-
-    @asyncio.coroutine
-    def render_post(self, request):
-        self._mydata = request.payload
-        payload = "POST OK".encode('ascii')
-        return aiocoap.Message(code=aiocoap.CONTENT, payload=payload)
-
 #class CoreResource(resource.Resource):
 #    """
 #    Example Resource that provides list of links hosted by a server.
@@ -157,7 +128,7 @@ def main():
 
     root.add_resource(('other', 'separate'), SeparateLargeResource())
 
-    root.add_resource(('other', 'store'), StoreResource())
+    root.add_resource(('servicediscovery', 'service'), ServiceResource())
 
     asyncio.async(aiocoap.Context.create_server_context(root))
 

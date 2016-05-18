@@ -30,5 +30,13 @@ if have_json:
     def service_parse_json(jsonstr):
         d = json.loads(jsonstr)
         print(repr(d))
-        params = { key: d.get(key, None) for key in ('name', 'type', 'host', 'port', 'domain', 'properties') }
+        params = { key: d.get(key, None) for key in ('name', 'type', 'host', 'port', 'domain') }
+        params['properties'] = {}
+        properties = d.get('properties', [])
+        for p in properties:
+            print(repr(p))
+            try:
+                params['properties'][p['name']] = p['value']
+            except KeyError:
+                continue
         return Service(**params)

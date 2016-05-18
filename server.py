@@ -14,7 +14,7 @@ import asyncio
 import aiocoap.resource as resource
 import aiocoap
 
-from arrowhead.core.servicediscovery.coap import ServiceResource
+from arrowhead.core.servicediscovery.coap import ServiceResource,  PublishResource, UnpublishResource
 
 class BlockResource(resource.Resource):
     """
@@ -86,7 +86,7 @@ class TimeResource(resource.ObservableResource):
 
     @asyncio.coroutine
     def render_get(self, request):
-        payload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M").encode('ascii')
+        payload = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S").encode('ascii')
         return aiocoap.Message(code=aiocoap.CONTENT, payload=payload)
 
 #class CoreResource(resource.Resource):
@@ -129,6 +129,8 @@ def main():
     root.add_resource(('other', 'separate'), SeparateLargeResource())
 
     root.add_resource(('servicediscovery', 'service'), ServiceResource())
+    root.add_resource(('servicediscovery', 'publish'), PublishResource())
+    root.add_resource(('servicediscovery', 'unpublish'), UnpublishResource())
 
     asyncio.async(aiocoap.Context.create_server_context(root))
 

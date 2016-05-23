@@ -39,57 +39,62 @@ class ServiceResource(resource.ObservableResource):
     def notify(self):
         self.updated_state()
 
-    @asyncio.coroutine
-    def render_get(self, request):
-        print('request: %r' %(request, ))
-        print('uri::     %r' % (request.opt.uri_path, ))
-        try:
-            name = request.postpath[-1]
-        except IndexError:
-            # Happens when postpath is empty
-            name = None
-        slist = self._directory.service(name=name)
+    def _render_service(self, request, service):
         code = aiocoap.CONTENT
-        if name:
-            try:
-                service = slist[0]
-            except IndexError:
-                # Not found service by that name, send result
-                return aiocoap.Message(code=aiocoap.NOT_FOUND, payload='')
-            if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
-                # JSON by default
-                payload = services.service_to_json(service)
-                format = media_types_rev['application/json']
-            elif request.opt.accept == media_types_rev['application/link-format']:
-                payload = services.service_to_corelf(service)
-                format = media_types_rev['application/link-format']
-            elif request.opt.accept == media_types_rev['application/xml']:
-                payload = services.service_to_xml(service)
-                format = media_types_rev['application/xml']
-            else:
-                # Unknown Accept format
-                payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-                format = media_types_rev['text/plain']
-                code = aiocoap.NOT_ACCEPTABLE
+        if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
+            # JSON by default
+            payload = services.service_to_json(service)
+            format = media_types_rev['application/json']
+        elif request.opt.accept == media_types_rev['application/link-format']:
+            payload = services.service_to_corelf(service)
+            format = media_types_rev['application/link-format']
+        elif request.opt.accept == media_types_rev['application/xml']:
+            payload = services.service_to_xml(service)
+            format = media_types_rev['application/xml']
         else:
-            if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
-                # JSON by default
-                payload = services.servicelist_to_json(slist)
-                format = media_types_rev['application/json']
-            elif request.opt.accept == media_types_rev['application/link-format']:
-                payload = services.servicelist_to_corelf(slist)
-                format = media_types_rev['application/link-format']
-            elif request.opt.accept == media_types_rev['application/xml']:
-                payload = services.servicelist_to_xml(slist)
-                format = media_types_rev['application/xml']
-            else:
-                # Unknown Accept format
-                payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-                format = media_types_rev['text/plain']
-                code = aiocoap.NOT_ACCEPTABLE
+            # Unknown Accept format
+            payload = ("Unknown accept option: %u" % (request.opt.accept, ))
+            format = media_types_rev['text/plain']
+            code = aiocoap.NOT_ACCEPTABLE
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = format
         return msg
+
+    def _render_servicelist(self, request, slist):
+        code = aiocoap.CONTENT
+        if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
+            # JSON by default
+            payload = services.servicelist_to_json(slist)
+            format = media_types_rev['application/json']
+        elif request.opt.accept == media_types_rev['application/link-format']:
+            payload = services.servicelist_to_corelf(slist)
+            format = media_types_rev['application/link-format']
+        elif request.opt.accept == media_types_rev['application/xml']:
+            payload = services.servicelist_to_xml(slist)
+            format = media_types_rev['application/xml']
+        else:
+            # Unknown Accept format
+            payload = ("Unknown accept option: %u" % (request.opt.accept, ))
+            format = media_types_rev['text/plain']
+            code = aiocoap.NOT_ACCEPTABLE
+        msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
+        msg.opt.content_format = format
+        return msg
+
+    @asyncio.coroutine
+    def render_get(self, request):
+        name = '/'.join(request.postpath)
+        if name:
+            slist = self._directory.service(name=name)
+            try:
+                service = slist[0]
+            except IndexError:
+                # Could not find a service by that name, send response code
+                return aiocoap.Message(code=aiocoap.NOT_FOUND, payload='')
+            return self._render_service(request, service)
+        else:
+            slist = self._directory.service()
+            return self._render_servicelist(request, slist)
 
 class PublishResource(resource.Resource):
     """/publish resource"""
@@ -163,31 +168,14 @@ class UnpublishResource(resource.Resource):
         msg.opt.content_format = media_types_rev['text/plain']
         return msg
 
-class TypeResource(resource.ObservableResource):
-    """/service resource"""
-    def __init__(self, directory):
-        super().__init__()
-        self._directory = directory
-        self.notify()
-
-    def notify(self):
-        self.updated_state()
-
-    @asyncio.coroutine
-    def render_get(self, request):
-        slist = self._directory.service()
-        format = media_types_rev['text/plain']
+class TypeResource(ServiceResource):
+    """/type resource"""
+    def _render_typelist(self, request, tlist):
         code = aiocoap.CONTENT
         if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
             # JSON by default
-            payload = services.servicelist_to_json(slist)
+            payload = json.dumps({'serviceType': tlist})
             format = media_types_rev['application/json']
-        elif request.opt.accept == media_types_rev['application/link-format']:
-            payload = services.servicelist_to_corelf(slist)
-            format = media_types_rev['application/link-format']
-        elif request.opt.accept == media_types_rev['application/xml']:
-            payload = services.servicelist_to_xml(slist)
-            format = media_types_rev['application/xml']
         else:
             # Unknown Accept format
             payload = ("Unknown accept option: %u" % (request.opt.accept, ))
@@ -196,3 +184,16 @@ class TypeResource(resource.ObservableResource):
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = format
         return msg
+
+    @asyncio.coroutine
+    def render_get(self, request):
+        name = '/'.join(request.postpath)
+        if name:
+            slist = self._directory.types(type=name)
+            if not slist:
+                # Could not find a service by that name, send response code
+                return aiocoap.Message(code=aiocoap.NOT_FOUND, payload='')
+            return self._render_servicelist(request, slist)
+        else:
+            tlist = self._directory.types()
+            return self._render_typelist(request, tlist)

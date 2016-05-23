@@ -1,4 +1,5 @@
 import time
+import calendar
 from tinydb import TinyDB, where
 
 class ServiceDirectory(object):
@@ -27,7 +28,7 @@ class ServiceDirectory(object):
 
     def publish(self, *, service):
         s = service.copy()
-        s['updated'] = time.gmtime()
+        s['updated'] = calendar.timegm(time.gmtime())
         if self._db.contains(where('name') == s['name']):
             self._db.update(s, where('name') == s['name'])
         else:

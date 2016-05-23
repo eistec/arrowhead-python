@@ -14,7 +14,7 @@ import asyncio
 import aiocoap.resource as resource
 import aiocoap
 
-from arrowhead.core.servicediscovery.coap import ServiceResource,  PublishResource, UnpublishResource, ParentSite
+from arrowhead.core.servicediscovery.coap import ServiceResource,  PublishResource, UnpublishResource, TypeResource, ParentSite
 from arrowhead.core.servicediscovery.directory import ServiceDirectory
 
 class TimeResource(resource.ObservableResource):
@@ -60,6 +60,7 @@ def main():
     root.add_resource(('servicediscovery', 'service'), ServiceResource(directory=directory))
     root.add_resource(('servicediscovery', 'publish'), PublishResource(directory=directory))
     root.add_resource(('servicediscovery', 'unpublish'), UnpublishResource(directory=directory))
+    root.add_resource(('servicediscovery', 'type'), TypeResource(directory=directory))
 
     asyncio.async(aiocoap.Context.create_server_context(root))
 

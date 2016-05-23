@@ -7,75 +7,108 @@ except ImportError:
     except ImportError:
         have_json = False
 
-class Service(object):
-    def __init__(self, *, name, type, host, port, domain=None, properties=None):
-        self.name = name
-        self.type = type
-        self.host = host
-        self.port = port
-        self.domain = domain
-        if properties is not None:
-            try:
-                props = {}
-                for it in properties['property']:
-                    try:
-                        props[it['name']] = it['value']
-                    except KeyError:
-                        pass
-                self.properties = props
-            except KeyError:
-                self.properties = { key: value for key, value in properties.items()}
-        else:
-            self.properties = {}
-            
-    def __repr__(self):
-        return "<arrowhead.core.services.Service at %#x: %s (%s)" % (
-                id(self),
-                self.name,
-                self.type,
-                )
-                
-    def as_dict(self):
-        """Get Service values as a dictionary"""
-        res = {key: self.__dict__[key] for key in ("name", "type", "host", "port", "domain")}
-        props = [ { 'name': name, 'value': value } for name, value in self.properties.items() ]
-        res['properties'] = {"property": props}
-        
-        return res
+have_xml = True
+try:
+    import xml.etree.ElementTree as ET
+except ImportError:
+    have_xml = False
 
-    def as_json(self):
-        d = self.as_dict()
-        return json.dumps(d)
+service_attributes = ("name", "type", "host", "port", "domain")
 
-    def as_xml(self):
-        props = ''.join(('<property><name>%s</name><value>%s</value></property>' % (k, v)) for (k, v) in self.properties.items())
-        xml_str = (
-            '<service>'
-                '<domain>%s</domain>'
-                '<host>%s</host>'
-                '<name>%s</name>'
-                '<port>%u</port>'
-                '<properties>%s</properties>'
-            '</service>') % (
-                self.domain, self.host, self.name, self.port, props)
-        return xml_str
+class ServiceError(Exception):
+    pass
 
-    def as_link(self, services, request):
-        link_str = ','.join(('<coap://[%s]:%s%s>' % (s.get('host', ''), s.get('port',  5683), s.get('properties',  {}).get('path', ''))) for s in services)
-        return link_str.encode('utf-8')
-
+def service_dict(**kwargs):
+    '''Create a new service dict'''
+    print(kwargs)
+    res = { key: kwargs.get(key, None) for key in service_attributes }
+    res['properties'] = kwargs.get('properties', {})
+    return res
 
 if have_json:
-    def service_parse_json(jsonstr):
+    def service_from_json(jsonstr):
         d = json.loads(jsonstr)
-        print(repr(d))
-        params = { key: d.get(key, None) for key in ('name', 'type', 'host', 'port', 'domain') }
-        params['properties'] = {}
-        properties = d.get('properties', {'property': []})['property']
-        for p in properties:
-            print(repr(p))
+        attrs = { key: d.get(key, None) for key in service_attributes }
+        props = {}
+        jp = d.get('properties', {'property': []})['property']
+        for p in jp:
             try:
-                params['properties'][p['name']] = p['value']
+                props[p['name']] = p['value']
             except KeyError:
                 continue
-        return Service(**params)
+        return service_dict(properties=props, **attrs)
+
+    def service_to_json(service):
+        '''Convert a service dict to a JSON representation'''
+        props = [ { 'name': name, 'value': value } for name, value in service['properties'].items() ]
+        res = {key: service.get(key, None) for key in service_attributes}
+        res['properties'] = {"property": props}
+        return json.dumps(res)
+
+def service_to_xml(service):
+    '''Convert a service dict to an XML representation'''
+    # note: Does not use any xml functions, hence unaffected by have_xml
+    props = ''.join(('<property><name>%s</name><value>%s</value></property>' % (k, v)) for (k, v) in service['properties'].items())
+    xml_str = (
+        '<service>'
+            '<domain>%s</domain>'
+            '<host>%s</host>'
+            '<name>%s</name>'
+            '<port>%u</port>'
+            '<properties>%s</properties>'
+        '</service>') % (
+            service['domain'], service['host'], service['name'], service['port'], props)
+    return xml_str
+
+if have_xml:
+    def service_from_xml(xmlstr):
+        res = service_dict()
+        root = ET.fromstring(xmlstr)
+        for child in root:
+            if child.tag in res:
+                # disallow multiple occurrences of the same tag
+                raise ServiceError("Multiple occurrence of tag <%s>" % child.tag, child.tag, child.text)
+            if child.tag in service_attributes:
+                res[child.tag] = child.text.strip()
+                # ignoring any XML attributes or child nodes
+            elif child.tag == 'properties':
+                props = {}
+                for c in child:
+                    if c.tag != 'property':
+                        # ignoring any unknown tags
+                        continue
+                    name = None
+                    value = None
+                    for pc in c:
+                        if pc.tag == 'name':
+                            if name is not None:
+                                raise ServiceError("Multiple occurrence of property tag <%s>" % pc.tag, pc.tag, pc.text)
+                            name = pc.text.strip()
+                        elif pc.tag == 'value':
+                            if value is not None:
+                                raise ServiceError("Multiple occurrence of property tag <%s>" % pc.tag, pc.tag, pc.text)
+                            value = pc.text.strip()
+                        # ignoring any unknown tags
+                    if not name:
+                        raise ServiceError("Missing property name (value=%s)" % value)
+                    if name in props:
+                        raise ServiceError("Multiple occurrence of property '%s'" % name, name, value, props[name])
+                    props[name] = value
+                res['properties'] = props
+            # ignoring any unknown tags
+        return res
+
+def service_to_corelf(service):
+    '''Convert a service dict to CoRE Link-format'''
+    host = str(service['host'])
+    if ':' in host:
+        # assume IPv6 address, wrap in brackets for URL construction
+        host = '[%s]' % host
+    port = str(service['port'])
+    if port:
+        port = ':' + port
+    path = service['properties'].get('path', '/')
+    if path and path[0] != '/':
+        path = '/' + path
+    link_str = '<coap://%s%s%s>' % (host, port, path)
+    return link_str

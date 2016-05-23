@@ -10,6 +10,24 @@ except ImportError:
 
 from .. import services
 
+uri_path_separator = '/'
+
+class ParentSite(resource.Site):
+    @asyncio.coroutine
+    def render(self, request):
+        path = tuple(request.opt.uri_path)
+        for i in range(len(path), 0, -1):
+            key = request.opt.uri_path[:i]
+            try:
+                child = self._resources[key]
+                request.prepath = key
+                request.postpath = request.opt.uri_path[i:]
+                print('pre: %r post: %r' % (request.prepath, request.postpath))
+            except KeyError:
+                continue
+            return child.render(request)
+        raise aiocoap.error.NoResource()
+
 class ServiceResource(resource.ObservableResource):
     """/service resource"""
     def __init__(self, directory):
@@ -23,24 +41,52 @@ class ServiceResource(resource.ObservableResource):
 
     @asyncio.coroutine
     def render_get(self, request):
-        slist = self._directory.service()
-        format = media_types_rev['text/plain']
+        print('request: %r' %(request, ))
+        print('uri::     %r' % (request.opt.uri_path, ))
+        try:
+            name = request.postpath[-1]
+        except IndexError:
+            # Happens when postpath is empty
+            name = None
+        slist = self._directory.service(name=name)
         code = aiocoap.CONTENT
-        if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
-            # JSON by default
-            payload = services.servicelist_to_json(slist)
-            format = media_types_rev['application/json']
-        elif request.opt.accept == media_types_rev['application/link-format']:
-            payload = services.servicelist_to_corelf(slist)
-            format = media_types_rev['application/link-format']
-        elif request.opt.accept == media_types_rev['application/xml']:
-            payload = services.servicelist_to_xml(slist)
-            format = media_types_rev['application/xml']
+        if name:
+            try:
+                service = slist[0]
+            except IndexError:
+                # Not found service by that name, send result
+                return aiocoap.Message(code=aiocoap.NOT_FOUND, payload='')
+            if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
+                # JSON by default
+                payload = services.service_to_json(service)
+                format = media_types_rev['application/json']
+            elif request.opt.accept == media_types_rev['application/link-format']:
+                payload = services.service_to_corelf(service)
+                format = media_types_rev['application/link-format']
+            elif request.opt.accept == media_types_rev['application/xml']:
+                payload = services.service_to_xml(service)
+                format = media_types_rev['application/xml']
+            else:
+                # Unknown Accept format
+                payload = ("Unknown accept option: %u" % (request.opt.accept, ))
+                format = media_types_rev['text/plain']
+                code = aiocoap.NOT_ACCEPTABLE
         else:
-            # Unknown Accept format
-            payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-            format = media_types_rev['text/plain']
-            code = aiocoap.NOT_ACCEPTABLE
+            if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
+                # JSON by default
+                payload = services.servicelist_to_json(slist)
+                format = media_types_rev['application/json']
+            elif request.opt.accept == media_types_rev['application/link-format']:
+                payload = services.servicelist_to_corelf(slist)
+                format = media_types_rev['application/link-format']
+            elif request.opt.accept == media_types_rev['application/xml']:
+                payload = services.servicelist_to_xml(slist)
+                format = media_types_rev['application/xml']
+            else:
+                # Unknown Accept format
+                payload = ("Unknown accept option: %u" % (request.opt.accept, ))
+                format = media_types_rev['text/plain']
+                code = aiocoap.NOT_ACCEPTABLE
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = format
         return msg

@@ -15,6 +15,7 @@ import aiocoap.resource as resource
 import aiocoap
 
 from arrowhead.core.servicediscovery.coap import ServiceResource,  PublishResource, UnpublishResource
+from arrowhead.core.servicediscovery.directory import ServiceDirectory
 
 class TimeResource(resource.ObservableResource):
     """
@@ -48,6 +49,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("coap-server").setLevel(logging.DEBUG)
 
 def main():
+    directory = ServiceDirectory('directory_db.json')
     # Resource tree creation
     root = resource.Site()
 
@@ -55,9 +57,9 @@ def main():
 
     root.add_resource(('time',), TimeResource())
 
-    root.add_resource(('servicediscovery', 'service'), ServiceResource())
-    root.add_resource(('servicediscovery', 'publish'), PublishResource())
-    root.add_resource(('servicediscovery', 'unpublish'), UnpublishResource())
+    root.add_resource(('servicediscovery', 'service'), ServiceResource(directory=directory))
+    root.add_resource(('servicediscovery', 'publish'), PublishResource(directory=directory))
+    root.add_resource(('servicediscovery', 'unpublish'), UnpublishResource(directory=directory))
 
     asyncio.async(aiocoap.Context.create_server_context(root))
 

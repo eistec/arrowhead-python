@@ -26,8 +26,8 @@ def service_dict(**kwargs):
     return res
 
 if have_json:
-    def service_from_json(jsonstr):
-        d = json.loads(jsonstr)
+    def service_from_json_dict(js_dict):
+        d = js_dict
         attrs = { key: d.get(key, None) for key in service_attributes }
         props = {}
         jp = d.get('properties', {'property': []})['property']
@@ -38,12 +38,19 @@ if have_json:
                 continue
         return service_dict(properties=props, **attrs)
 
-    def service_to_json(service):
-        '''Convert a service dict to a JSON representation'''
+    def service_from_json(jsonstr):
+        return service_from_json_dict(json.loads(jsonstr))
+
+    def service_to_json_dict(service):
+        '''Convert a service dict to a JSON representation dict'''
         props = [ { 'name': name, 'value': value } for name, value in service['properties'].items() ]
         res = {key: service.get(key, None) for key in service_attributes}
         res['properties'] = {"property": props}
-        return json.dumps(res)
+        return res
+
+    def service_to_json(service):
+        '''Convert a JSON service dict to JSON text'''
+        return json.dumps(service_to_json_dict(service))
 
 def service_to_xml(service):
     '''Convert a service dict to an XML representation'''
@@ -112,3 +119,13 @@ def service_to_corelf(service):
         path = '/' + path
     link_str = '<coap://%s%s%s>' % (host, port, path)
     return link_str
+
+def servicelist_to_json(slist):
+    return json.dumps({'service': [service_to_json_dict(s) for s in slist]})
+
+def servicelist_to_xml(slist):
+    return '<serviceList>' + ''.join([service_to_xml(s) for s in slist]) + '</serviceList>'
+
+def servicelist_to_corelf(slist):
+    '''Return a core link-format string for the given services'''
+    return ','.join([service_to_corelf(s) for s in slist])

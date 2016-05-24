@@ -1,10 +1,10 @@
 __all__ = ['Resource', 'ParentSite', 'ServiceResource', 'PublishResource', 'UnpublishResource']
 
 import asyncio
-import logging
 import aiocoap.resource as resource
 from aiocoap.numbers import media_types_rev
 import aiocoap
+from ..logging import LoggingMixin
 
 try:
     import json
@@ -14,12 +14,6 @@ except ImportError:
 from .. import services
 
 uri_path_separator = '/'
-
-class LoggingMixin(object):
-    '''Logging mixin object'''
-    def __init__(self, loggername, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.log = logging.getLogger(loggername)
 
 class ObservableResource(LoggingMixin, resource.ObservableResource):
     pass
@@ -46,6 +40,8 @@ class ParentSite(LoggingMixin, resource.Site):
                 request.prepath = key
                 request.postpath = request.opt.uri_path[i:]
                 self.log.debug('prepath: %r postpath: %r' % (request.prepath, request.postpath))
+            self.log.info('Request: %r' % (request, ))
+            self.log.info('options: %r' % (request.opt, ))
             return child.render(request)
         raise aiocoap.error.NoResource()
 
@@ -126,9 +122,9 @@ class PublishResource(Resource):
 
     @asyncio.coroutine
     def render_post(self, request):
-        self.log.debug('POST %r' % (request.uri_path))
+        self.log.info('POST %r' % (request.opt.uri_path, ))
         if request.opt.content_format == media_types_rev['application/json']:
-            self.log.debug('POST JSON: %r' % request.payload)
+            self.log.info('POST JSON: %r' % request.payload)
             try:
                 s = services.service_from_json(request.payload.decode('utf-8'))
             except:
@@ -136,7 +132,7 @@ class PublishResource(Resource):
                 payload = 'Invalid data, expected JSON service'
                 code = aiocoap.BAD_REQUEST
             else:
-                print(repr(s))
+                self.log.info('Publish: %r' % (s, ))
                 if not s['name']:
                     # bad input
                     payload = 'Missing service name'

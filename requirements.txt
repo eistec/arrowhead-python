@@ -1,0 +1,2 @@
+tinydb>=3.0
+aiocoap>=0.2

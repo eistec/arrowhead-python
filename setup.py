@@ -10,6 +10,9 @@ import arrowhead
 
 here = os.path.abspath(os.path.dirname(__file__))
 
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
+
 def read(*filenames, **kwargs):
     encoding = kwargs.get('encoding', 'utf-8')
     sep = kwargs.get('sep', '\n')
@@ -39,10 +42,7 @@ setup(
     license='Apache Software License',
     author='Joakim Nohlgård',
     tests_require=['pytest'],
-    install_requires=[
-        'tinydb>=3.0',
-        'aiocoap>=0.2',
-        ],
+    install_requires=required,
     cmdclass={'test': PyTest},
     author_email='joakim.nohlgard@eistec.se',
     description='Arrowhead core services',

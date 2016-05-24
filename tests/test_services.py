@@ -1,5 +1,5 @@
 import pytest
-from arrowhead.core import services
+from arrowhead import services
 try:
     import json
 except ImportError:

@@ -102,10 +102,8 @@ class ServiceResource(ObservableResource):
         name = '/'.join(request.postpath)
         self.log.debug('GET service %s' % (name, ))
         if name:
-            slist = self._directory.service(name=name)
-            try:
-                service = slist[0]
-            except IndexError:
+            service = self._directory.service(name=name)
+            if service is None:
                 # Could not find a service by that name, send response code
                 return aiocoap.Message(code=aiocoap.NOT_FOUND, payload='')
             return self._render_service(request, service)
@@ -166,7 +164,6 @@ class UnpublishResource(Resource):
                 payload = 'Invalid data, expected JSON: {"name":"servicename"}'
                 code = aiocoap.BAD_REQUEST
             else:
-                print(repr(d))
                 self._directory.unpublish(name=d['name'])
                 payload = 'POST OK'
                 code = aiocoap.DELETED

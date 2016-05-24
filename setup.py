@@ -52,9 +52,8 @@ setup(
     include_package_data=True,
     platforms='any',
     classifiers = [
-        'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
         'Development Status :: 3 - Alpha',
-        'Natural Language :: English',
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',

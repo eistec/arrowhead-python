@@ -34,7 +34,6 @@ class ServiceError(Exception):
 
 def service_dict(**kwargs):
     '''Create a new service dict'''
-    print(kwargs)
     res = { key: kwargs.get(key, None) for key in service_attributes }
     res['properties'] = kwargs.get('properties', {})
     return res

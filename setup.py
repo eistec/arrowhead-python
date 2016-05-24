@@ -50,7 +50,6 @@ setup(
     packages=['arrowhead'],
     include_package_data=True,
     platforms='any',
-    test_suite='arrowhead.core',
     classifiers = [
         'Programming Language :: Python',
         'Development Status :: 3 - Alpha',

@@ -15,6 +15,20 @@ except ImportError:
 
 service_attributes = ("name", "type", "host", "port", "domain")
 
+__all__ = [
+    'ServiceError',
+    'service_dict',
+    'service_from_json',
+    'service_from_json_dict',
+    'service_from_xml',
+    'service_to_corelf',
+    'service_to_json',
+    'service_to_json_dict',
+    'service_to_xml',
+    'servicelist_to_corelf',
+    'servicelist_to_json',
+    'servicelist_to_xml']
+
 class ServiceError(Exception):
     pass
 

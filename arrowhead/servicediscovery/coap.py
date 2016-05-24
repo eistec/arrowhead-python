@@ -1,3 +1,5 @@
+__all__ = ['Resource', 'ParentSite', 'ServiceResource', 'PublishResource', 'UnpublishResource']
+
 import asyncio
 import logging
 import aiocoap.resource as resource

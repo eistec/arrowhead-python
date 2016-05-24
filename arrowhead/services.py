@@ -69,6 +69,7 @@ def service_to_xml(service):
 
 if have_xml:
     def service_from_xml(xmlstr):
+        '''Convert XML representation of service to service dict'''
         res = service_dict()
         root = ET.fromstring(xmlstr)
         for child in root:
@@ -126,6 +127,6 @@ def servicelist_to_json(slist):
 def servicelist_to_xml(slist):
     return '<serviceList>' + ''.join([service_to_xml(s) for s in slist]) + '</serviceList>'
 
-def servicelist_to_corelf(slist):
+def servicelist_to_corelf(slist, uri_base):
     '''Return a core link-format string for the given services'''
-    return ','.join([service_to_corelf(s) for s in slist])
+    return ','.join(['<%s/%s>' % (uri_base, s['name']) for s in slist])

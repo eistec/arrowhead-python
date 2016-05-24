@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import aiocoap.resource as resource
 from aiocoap.numbers import media_types_rev
 import aiocoap
@@ -12,7 +13,24 @@ from .. import services
 
 uri_path_separator = '/'
 
-class ParentSite(resource.Site):
+class LoggingMixin(object):
+    '''Logging mixin object'''
+    def __init__(self, loggername, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.log = logging.getLogger(loggername)
+
+class ObservableResource(LoggingMixin, resource.ObservableResource):
+    pass
+
+class Resource(LoggingMixin, resource.Resource):
+    pass
+
+class ParentSite(LoggingMixin, resource.Site):
+    '''CoAP Site resource which sends the request to the closest parent if the
+    exact resource specified in the URL was not found'''
+    def __init__(self, loggername='coap-parent'):
+        super().__init__(loggername=loggername)
+
     @asyncio.coroutine
     def render(self, request):
         path = tuple(request.opt.uri_path)
@@ -20,18 +38,19 @@ class ParentSite(resource.Site):
             key = request.opt.uri_path[:i]
             try:
                 child = self._resources[key]
-                request.prepath = key
-                request.postpath = request.opt.uri_path[i:]
-                print('pre: %r post: %r' % (request.prepath, request.postpath))
             except KeyError:
                 continue
+            else:
+                request.prepath = key
+                request.postpath = request.opt.uri_path[i:]
+                self.log.debug('prepath: %r postpath: %r' % (request.prepath, request.postpath))
             return child.render(request)
         raise aiocoap.error.NoResource()
 
-class ServiceResource(resource.ObservableResource):
+class ServiceResource(ObservableResource):
     """/service resource"""
-    def __init__(self, directory):
-        super().__init__()
+    def __init__(self, directory, loggername='coap-service'):
+        super().__init__(loggername=loggername)
         self._directory = directory
         self._directory.add_notify_callback(self.notify)
         self.notify()
@@ -67,7 +86,8 @@ class ServiceResource(resource.ObservableResource):
             payload = services.servicelist_to_json(slist)
             format = media_types_rev['application/json']
         elif request.opt.accept == media_types_rev['application/link-format']:
-            payload = services.servicelist_to_corelf(slist)
+            uri_base_str = '/' + '/'.join(request.prepath)
+            payload = services.servicelist_to_corelf(slist, uri_base_str)
             format = media_types_rev['application/link-format']
         elif request.opt.accept == media_types_rev['application/xml']:
             payload = services.servicelist_to_xml(slist)
@@ -96,16 +116,17 @@ class ServiceResource(resource.ObservableResource):
             slist = self._directory.service()
             return self._render_servicelist(request, slist)
 
-class PublishResource(resource.Resource):
+class PublishResource(Resource):
     """/publish resource"""
-    def __init__(self, directory):
-        super().__init__()
+    def __init__(self, directory, loggername='coap-publish'):
+        super().__init__(loggername=loggername)
         self._directory = directory
 
     @asyncio.coroutine
     def render_post(self, request):
+        self.log.debug('POST %r' % (request.uri_path))
         if request.opt.content_format == media_types_rev['application/json']:
-            print('json: %s' % request.payload)
+            self.log.debug('POST JSON: %r' % request.payload)
             try:
                 s = services.service_from_json(request.payload.decode('utf-8'))
             except:
@@ -132,16 +153,16 @@ class PublishResource(resource.Resource):
         msg.opt.content_format = media_types_rev['text/plain']
         return msg
 
-class UnpublishResource(resource.Resource):
+class UnpublishResource(Resource):
     """/unpublish resource"""
-    def __init__(self, directory):
-        super().__init__()
+    def __init__(self, directory, loggername='coap-unpublish'):
+        super().__init__(loggername=loggername)
         self._directory = directory
 
     @asyncio.coroutine
     def render_post(self, request):
         if request.opt.content_format == aiocoap.numbers.media_types_rev['application/json']:
-            print('json: %s' % request.payload)
+            self.log.debug('POST JSON: %r' % request.payload)
             try:
                 d = json.loads(request.payload.decode('utf-8'))
             except:

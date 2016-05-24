@@ -14,8 +14,8 @@ import asyncio
 import aiocoap.resource as resource
 import aiocoap
 
-from arrowhead.core.servicediscovery.coap import ServiceResource,  PublishResource, UnpublishResource, TypeResource, ParentSite
-from arrowhead.core.servicediscovery.directory import ServiceDirectory
+from arrowhead.servicediscovery.coap import ServiceResource,  PublishResource, UnpublishResource, TypeResource, ParentSite
+from arrowhead.servicediscovery.directory import ServiceDirectory
 
 class TimeResource(resource.ObservableResource):
     """

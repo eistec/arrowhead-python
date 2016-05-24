@@ -1,2 +1,3 @@
 tinydb>=3.0
 aiocoap>=0.2
+LinkHeader>=0.4.3

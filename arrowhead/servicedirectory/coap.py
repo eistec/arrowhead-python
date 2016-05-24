@@ -34,12 +34,11 @@ class ParentSite(LogMixin, resource.Site):
                 child = self._resources[key]
             except KeyError:
                 continue
-            else:
-                request.prepath = key
-                request.postpath = request.opt.uri_path[i:]
-                self.log.debug('prepath: %r postpath: %r' % (request.prepath, request.postpath))
-            self.log.info('Request: %r' % (request, ))
-            self.log.info('options: %r' % (request.opt, ))
+            request.prepath = key
+            request.postpath = request.opt.uri_path[i:]
+            self.log.debug('prepath: %r postpath: %r' % (request.prepath, request.postpath))
+            self.log.debug('Request: %r' % (request, ))
+            self.log.debug('options: %r' % (request.opt, ))
             return child.render(request)
         raise aiocoap.error.NoResource()
 

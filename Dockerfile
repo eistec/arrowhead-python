@@ -26,8 +26,8 @@ RUN pip3 install /tmp/arrowhead*.tar.gz && rm /tmp/arrowhead*.tar.gz
 # Create application directory and an empty database file
 # will run as unprivileged servicedirectory user
 RUN mkdir -p /opt/core-services \
-  && useradd -r -d /opt/core-services -s /sbin/nologin -U servicedirectory
-  && touch /opt/core-services/directory_db.json
+  && useradd -r -d /opt/core-services -s /sbin/nologin -U servicedirectory \
+  && touch /opt/core-services/directory_db.json \
   && chown servicedirectory /opt/core-services/directory_db.json
 COPY sd_server.py /opt/core-services/
 

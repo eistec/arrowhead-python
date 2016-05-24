@@ -48,7 +48,7 @@ setup(
     author_email='joakim.nohlgard@eistec.se',
     description='Arrowhead core services',
     long_description=long_description,
-    packages=['arrowhead'],
+    packages=['arrowhead','arrowhead.servicedirectory'],
     include_package_data=True,
     platforms='any',
     classifiers = [

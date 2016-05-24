@@ -10,6 +10,7 @@ import arrowhead
 
 here = os.path.abspath(os.path.dirname(__file__))
 
+# Remember to add requirements.txt to MANIFEST.in
 with open('requirements.txt') as f:
     required = f.read().splitlines()
 

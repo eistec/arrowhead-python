@@ -23,12 +23,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(argv)
     parser.add_argument('-f', '--dbfile', type=str, metavar='FILE', default='directory_db.json',
                         help="Service directory database filename")
-    parser.add_argument("-v", "--verbosity", type=int, default=3,
-                        help="set logging verbosity, 0=CRITICAL, 5=DEBUG")
+    parser.add_argument("-v", "--verbosity", type=int, default=4,
+                        help="set logging verbosity, 1=CRITICAL, 5=DEBUG")
     args = parser.parse_args()
 
     # logging setup
-    logging.basicConfig(level=loglevels[args.verbosity])
+    logging.basicConfig(level=loglevels[args.verbosity-1])
     # selective log levels
     #logging.getLogger("coap-server").setLevel(logging.DEBUG)
     #logging.getLogger("arrowhead").setLevel(logging.DEBUG)

@@ -1,11 +1,11 @@
 import time
 import calendar
 from tinydb import TinyDB, where
-from ..logging import LoggingMixin
+from ..log import LogMixin
 
-class ServiceDirectory(LoggingMixin, object):
-    def __init__(self, database, loggername='directory'):
-        super().__init__(loggername=loggername)
+class ServiceDirectory(LogMixin, object):
+    def __init__(self, database):
+        super().__init__()
         if isinstance(database, str):
             # database is used as a file name
             self._db = TinyDB(database)
@@ -31,8 +31,7 @@ class ServiceDirectory(LoggingMixin, object):
     def publish(self, *, service):
         s = service.copy()
         s['updated'] = calendar.timegm(time.gmtime())
-        self.log.info('publish: %r' % (s, ))
-        print('publish: %r' % (s, ))
+        self.log.debug('publish: %r' % (s, ))
         if self._db.contains(where('name') == s['name']):
             self._db.update(s, where('name') == s['name'])
         else:
@@ -40,6 +39,7 @@ class ServiceDirectory(LoggingMixin, object):
         self._call_notify()
 
     def unpublish(self, *, name):
+        self.log.debug('unpublish: %s' % (name, ))
         self._db.remove(where('name') == name)
         self._call_notify()
 

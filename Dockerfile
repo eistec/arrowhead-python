@@ -15,10 +15,6 @@ RUN apk add --update \
   && pip3 install virtualenv \
   && rm -rf /var/cache/apk/*
 
-# Install all required packages
-COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install --requirement /tmp/requirements.txt && rm /tmp/requirements.txt
-
 # Copy files, must run `python setup.py sdist` prior to building in order to create the source package
 COPY dist/arrowhead*.tar.gz /tmp/
 RUN pip3 install /tmp/arrowhead*.tar.gz && rm /tmp/arrowhead*.tar.gz

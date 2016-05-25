@@ -44,6 +44,7 @@ class ParentSite(LogMixin, resource.Site):
 
 class ServiceResource(ObservableResource):
     """/service resource"""
+    service_url = '/service'
     def __init__(self, directory):
         super().__init__()
         self._directory = directory
@@ -82,7 +83,7 @@ class ServiceResource(ObservableResource):
             payload = services.servicelist_to_json(slist)
             format = media_types_rev['application/json']
         elif request.opt.accept == media_types_rev['application/link-format']:
-            uri_base_str = '/' + '/'.join(request.prepath)
+            uri_base_str = '/' + '/'.join(request.prepath[:-1]) + self.service_url
             payload = services.servicelist_to_corelf(slist, uri_base_str)
             format = media_types_rev['application/link-format']
         elif request.opt.accept == media_types_rev['application/xml']:
@@ -184,12 +185,17 @@ class UnpublishResource(Resource):
 
 class TypeResource(ServiceResource):
     """/type resource"""
+    type_url = '/type'
     def _render_typelist(self, request, tlist):
         code = aiocoap.CONTENT
         if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
             # JSON by default
             payload = json.dumps({'serviceType': tlist})
             format = media_types_rev['application/json']
+        elif request.opt.accept == media_types_rev['application/link-format']:
+            uri_base_str = '/' + '/'.join(request.prepath[:-1]) + self.type_url
+            payload = ','.join(['<%s/%s>' % (uri_base_str, t) for t in tlist])
+            format = media_types_rev['application/link-format']
         else:
             # Unknown Accept format
             payload = ("Unknown accept option: %u" % (request.opt.accept, ))

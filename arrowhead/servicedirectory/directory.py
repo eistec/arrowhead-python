@@ -87,7 +87,8 @@ class ServiceDirectory(LogMixin, object):
 
     def types(self, *, type=None):
         table = self._get_service_table()
+        now = unix_now()
         if type is not None:
-            return table.search(where('type') == type)
+            return table.search((where('type') == type) & (where('deadline') >= now))
         else:
-            return [ v['type'] for v in table.all() ]
+            return [ v['type'] for v in table.search(where('deadline') >= now) ]

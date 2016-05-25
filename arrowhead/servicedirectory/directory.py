@@ -1,6 +1,5 @@
 import time
 import calendar
-import asyncio
 from tinydb import TinyDB, where
 from ..log import LogMixin
 
@@ -30,10 +29,9 @@ class ServiceDirectory(LogMixin, object):
     def prune_old_services(self):
         table = self._get_service_table()
         now = unix_now()
-        too_old = table.search(where('deadline') < now)
-        table.remove(where('deadline') < now)
-        self.log.debug('pruned %u timed out services', len(too_old))
-        pass
+        if table.contains(where('deadline') < now):
+            ids = table.remove(where('deadline') < now)
+            self.log.debug('pruned %u timed out services', len(ids))
 
     def add_notify_callback(self, callback):
         if callback in self._notify_set:
@@ -46,14 +44,12 @@ class ServiceDirectory(LogMixin, object):
         self._notify_set.remove(callback)
 
     def _call_notify(self):
+        self.prune_old_services()
         for cb in self._notify_set:
             cb()
 
     def _get_service_table(self):
         return self._db.table('services')
-
-    def _get_trash_table(self):
-        return self._db.table('trash')
 
     def _get_config_table(self):
         return self._db.table('config')

@@ -42,7 +42,7 @@ setup(
     url='http://github.com/eistec/arrowhead-python/',
     license='Apache Software License',
     author='Joakim Nohlgård',
-    tests_require=['pytest'],
+    tests_require=['pytest','pytest-cov'],
     install_requires=required,
     cmdclass={'test': PyTest},
     author_email='joakim.nohlgard@eistec.se',

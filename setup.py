@@ -12,7 +12,14 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 # Remember to add requirements.txt to MANIFEST.in
 with open('requirements.txt') as f:
-    required = f.read().splitlines()
+    install_requires = f.read().splitlines()
+
+try:
+    with open('requirements-tests.txt') as f:
+        tests_require = f.read().splitlines()
+except:
+    # the tests and requirements-tests.txt is not included with the pip package
+    tests_require = []
 
 def read(*filenames, **kwargs):
     encoding = kwargs.get('encoding', 'utf-8')
@@ -42,8 +49,8 @@ setup(
     url='http://github.com/eistec/arrowhead-python/',
     license='Apache Software License',
     author='Joakim Nohlgård',
-    tests_require=['pytest','pylint','coverage','pytest-cov','pytest-pylint'],
-    install_requires=required,
+    tests_require=tests_require,
+    install_requires=install_requires,
     cmdclass={'test': PyTest},
     author_email='joakim.nohlgard@eistec.se',
     description='Arrowhead core services',

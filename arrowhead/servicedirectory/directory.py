@@ -87,4 +87,4 @@ class ServiceDirectory(LogMixin, object):
         if type is not None:
             return table.search((where('type') == type) & (where('deadline') >= now))
         else:
-            return [ v['type'] for v in table.search(where('deadline') >= now) ]
+            return [v['type'] for v in table.search(where('deadline') >= now)]

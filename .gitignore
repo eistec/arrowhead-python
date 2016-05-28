@@ -21,3 +21,8 @@ __pycache__/
 /dist/
 .eggs/
 .cache/
+/docs/_build/
+.coverage
+.tox/
+*.egg-info
+/coverage_report_html/

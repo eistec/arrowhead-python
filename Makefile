@@ -1,4 +1,4 @@
-.PHONY: help init test cov doc
+.PHONY: help init tests test cov docs doc
 
 help:
 	@cat make-help.md
@@ -6,6 +6,7 @@ help:
 init:
 	pip install -r requirements.txt
 
+tests: test
 test:
 	py.test --pylint arrowhead
 
@@ -13,5 +14,6 @@ cov:
 	py.test --cov=arrowhead --cov-report=html --cov-report=term
 	xdg-open coverage_report_html/index.html
 
+docs: doc
 doc:
-	@echo "Missing documentation!"
+	$(MAKE) -C docs html

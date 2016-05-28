@@ -1,4 +1,9 @@
-__all__ = ['Resource', 'ParentSite', 'ServiceResource', 'PublishResource', 'UnpublishResource']
+__all__ = [
+    'Resource',
+    'ParentSite',
+    'ServiceResource',
+    'PublishResource',
+    'UnpublishResource']
 
 import asyncio
 import aiocoap.resource as resource
@@ -15,11 +20,14 @@ from .. import services
 
 uri_path_separator = '/'
 
+
 class ObservableResource(LogMixin, resource.ObservableResource):
     pass
 
+
 class Resource(LogMixin, resource.Resource):
     pass
+
 
 class ParentSite(LogMixin, resource.Site):
     '''CoAP Site resource which sends the request to the closest parent if the
@@ -36,15 +44,19 @@ class ParentSite(LogMixin, resource.Site):
                 continue
             request.prepath = key
             request.postpath = request.opt.uri_path[i:]
-            self.log.debug('prepath: %r postpath: %r' % (request.prepath, request.postpath))
+            self.log.debug(
+                'prepath: %r postpath: %r' %
+                (request.prepath, request.postpath))
             self.log.debug('Request: %r' % (request, ))
             self.log.debug('options: %r' % (request.opt, ))
             return child.render(request)
         raise aiocoap.error.NoResource()
 
+
 class ServiceResource(ObservableResource):
     """/service resource"""
     service_url = '/service'
+
     def __init__(self, directory):
         super().__init__()
         self._directory = directory
@@ -57,7 +69,8 @@ class ServiceResource(ObservableResource):
 
     def _render_service(self, request, service):
         code = aiocoap.CONTENT
-        if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
+        if request.opt.accept is None or request.opt.accept == media_types_rev[
+                'application/json']:
             # JSON by default
             payload = services.service_to_json(service)
             format = media_types_rev['application/json']
@@ -78,12 +91,14 @@ class ServiceResource(ObservableResource):
 
     def _render_servicelist(self, request, slist):
         code = aiocoap.CONTENT
-        if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
+        if request.opt.accept is None or request.opt.accept == media_types_rev[
+                'application/json']:
             # JSON by default
             payload = services.servicelist_to_json(slist)
             format = media_types_rev['application/json']
         elif request.opt.accept == media_types_rev['application/link-format']:
-            uri_base_str = '/' + '/'.join(request.prepath[:-1]) + self.service_url
+            uri_base_str = '/' + \
+                '/'.join(request.prepath[:-1]) + self.service_url
             payload = services.servicelist_to_corelf(slist, uri_base_str)
             format = media_types_rev['application/link-format']
         elif request.opt.accept == media_types_rev['application/xml']:
@@ -112,8 +127,10 @@ class ServiceResource(ObservableResource):
             slist = self._directory.service()
             return self._render_servicelist(request, slist)
 
+
 class PublishResource(Resource):
     """/publish resource"""
+
     def __init__(self, directory):
         super().__init__()
         self._directory = directory
@@ -143,20 +160,25 @@ class PublishResource(Resource):
                     payload = 'POST OK'
         else:
             code = aiocoap.UNSUPPORTED_MEDIA_TYPE
-            payload = ('Unknown Content-Format option: %u' % (request.opt.content_format, ))
+            payload = (
+                'Unknown Content-Format option: %u' %
+                (request.opt.content_format, ))
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = media_types_rev['text/plain']
         return msg
 
+
 class UnpublishResource(Resource):
     """/unpublish resource"""
+
     def __init__(self, directory):
         super().__init__()
         self._directory = directory
 
     @asyncio.coroutine
     def render_post(self, request):
-        if request.opt.content_format == aiocoap.numbers.media_types_rev['application/json']:
+        if request.opt.content_format == aiocoap.numbers.media_types_rev[
+                'application/json']:
             self.log.debug('POST JSON: %r' % request.payload)
             try:
                 d = json.loads(request.payload.decode('utf-8'))
@@ -183,12 +205,15 @@ class UnpublishResource(Resource):
         msg.opt.content_format = media_types_rev['text/plain']
         return msg
 
+
 class TypeResource(ServiceResource):
     """/type resource"""
     type_url = '/type'
+
     def _render_typelist(self, request, tlist):
         code = aiocoap.CONTENT
-        if request.opt.accept is None or request.opt.accept == media_types_rev['application/json']:
+        if request.opt.accept is None or request.opt.accept == media_types_rev[
+                'application/json']:
             # JSON by default
             payload = json.dumps({'serviceType': tlist})
             format = media_types_rev['application/json']

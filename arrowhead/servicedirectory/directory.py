@@ -3,13 +3,16 @@ import calendar
 from tinydb import TinyDB, where
 from ..log import LogMixin
 
+
 def unix_now():
     return calendar.timegm(time.gmtime())
+
 
 class ServiceDirectory(LogMixin, object):
     config_defaults = {
         'ttl': 30 * 60
     }
+
     def __init__(self, database):
         super().__init__()
         if isinstance(database, str):
@@ -24,7 +27,8 @@ class ServiceDirectory(LogMixin, object):
         self._notify_set = set()
 
     def _get_config_value(self, key):
-        return self._get_config_table().get(where('key') == key) or self.config_defaults[key]
+        return self._get_config_table().get(
+            where('key') == key) or self.config_defaults[key]
 
     def prune_old_services(self):
         table = self._get_service_table()
@@ -85,6 +89,8 @@ class ServiceDirectory(LogMixin, object):
         table = self._get_service_table()
         now = unix_now()
         if type is not None:
-            return table.search((where('type') == type) & (where('deadline') >= now))
+            return table.search(
+                (where('type') == type) & (
+                    where('deadline') >= now))
         else:
             return [v['type'] for v in table.search(where('deadline') >= now)]

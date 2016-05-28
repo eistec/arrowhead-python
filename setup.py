@@ -28,7 +28,7 @@ long_description = read('README.rst')
 class PyTest(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
-        self.test_args = []
+        self.test_args = ['--pylint','--cov','arrowhead']
         self.test_suite = True
 
     def run_tests(self):
@@ -42,7 +42,7 @@ setup(
     url='http://github.com/eistec/arrowhead-python/',
     license='Apache Software License',
     author='Joakim Nohlgård',
-    tests_require=['pytest','pytest-cov'],
+    tests_require=['pytest','pylint','coverage','pytest-cov','pytest-pylint'],
     install_requires=required,
     cmdclass={'test': PyTest},
     author_email='joakim.nohlgard@eistec.se',

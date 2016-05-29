@@ -35,7 +35,7 @@ long_description = read('README.rst')
 class PyTest(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
-        self.test_args = ['--pylint','--cov','arrowhead']
+        self.test_args = ['--pylint','--cov','arrowhead','arrowhead','tests']
         self.test_suite = True
 
     def run_tests(self):

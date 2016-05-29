@@ -1,3 +1,20 @@
+"""CoAP implementation of the Arrowhead Service Directory based around aiocoap"""
+
+import asyncio
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
+import aiocoap.resource as resource
+from aiocoap.numbers import media_types_rev
+from aiocoap.numbers.codes import Code
+import aiocoap
+
+from ..log import LogMixin
+
+from .. import services
+
 __all__ = [
     'Resource',
     'ParentSite',
@@ -5,28 +22,15 @@ __all__ = [
     'PublishResource',
     'UnpublishResource']
 
-import asyncio
-import aiocoap.resource as resource
-from aiocoap.numbers import media_types_rev
-import aiocoap
-from ..log import LogMixin
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
-
-from .. import services
-
-uri_path_separator = '/'
+URI_PATH_SEPARATOR = '/'
 
 
 class ObservableResource(LogMixin, resource.ObservableResource):
-    pass
+    """plain aiocoap.resource.ObservableResource with added LogMixin"""
 
 
 class Resource(LogMixin, resource.Resource):
-    pass
+    """plain aiocoap.resource.Resource with added LogMixin"""
 
 
 class ParentSite(LogMixin, resource.Site):
@@ -63,68 +67,74 @@ class ServiceResource(ObservableResource):
         self._directory.add_notify_callback(self.notify)
         self.notify()
 
-    def notify(self):
+    def notify(self, directory=None):
+        """Send notifications to all registered subscribers"""
         self.log.debug('Notifying subscribers')
         self.updated_state()
 
     def _render_service(self, request, service):
-        code = aiocoap.CONTENT
+        code = Code.CONTENT
         if request.opt.accept is None or request.opt.accept == media_types_rev[
                 'application/json']:
             # JSON by default
             payload = services.service_to_json(service)
-            format = media_types_rev['application/json']
+            content_format = media_types_rev['application/json']
         elif request.opt.accept == media_types_rev['application/link-format']:
             payload = services.service_to_corelf(service)
-            format = media_types_rev['application/link-format']
+            content_format = media_types_rev['application/link-format']
         elif request.opt.accept == media_types_rev['application/xml']:
             payload = services.service_to_xml(service)
-            format = media_types_rev['application/xml']
+            content_format = media_types_rev['application/xml']
         else:
             # Unknown Accept format
             payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-            format = media_types_rev['text/plain']
-            code = aiocoap.NOT_ACCEPTABLE
+            content_format = media_types_rev['text/plain']
+            code = Code.NOT_ACCEPTABLE
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
-        msg.opt.content_format = format
+        msg.opt.content_format = content_format
         return msg
 
     def _render_servicelist(self, request, slist):
-        code = aiocoap.CONTENT
+        code = Code.CONTENT
         if request.opt.accept is None or request.opt.accept == media_types_rev[
                 'application/json']:
             # JSON by default
             payload = services.servicelist_to_json(slist)
-            format = media_types_rev['application/json']
+            content_format = media_types_rev['application/json']
         elif request.opt.accept == media_types_rev['application/link-format']:
             uri_base_str = '/' + \
                 '/'.join(request.prepath[:-1]) + self.service_url
             payload = services.servicelist_to_corelf(slist, uri_base_str)
-            format = media_types_rev['application/link-format']
+            content_format = media_types_rev['application/link-format']
         elif request.opt.accept == media_types_rev['application/xml']:
             payload = services.servicelist_to_xml(slist)
-            format = media_types_rev['application/xml']
+            content_format = media_types_rev['application/xml']
         else:
             # Unknown Accept format
             payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-            format = media_types_rev['text/plain']
-            code = aiocoap.NOT_ACCEPTABLE
+            content_format = media_types_rev['text/plain']
+            code = Code.NOT_ACCEPTABLE
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
-        msg.opt.content_format = format
+        msg.opt.content_format = content_format
         return msg
 
     @asyncio.coroutine
     def render_get(self, request):
+        """GET handler, respond with either a service list or a single service
+
+        :param request: The inbound CoAP request
+        :type request: aiocoap.Message
+        """
         name = '/'.join(request.postpath)
         self.log.debug('GET service %s' % (name, ))
         if name:
             service = self._directory.service(name=name)
             if service is None:
                 # Could not find a service by that name, send response code
-                return aiocoap.Message(code=aiocoap.NOT_FOUND, payload='')
+                return aiocoap.Message(code=Code.NOT_FOUND, payload='')
             return self._render_service(request, service)
         else:
-            slist = self._directory.service()
+            slist = self._directory.service_list()
             return self._render_servicelist(request, slist)
 
 
@@ -137,31 +147,44 @@ class PublishResource(Resource):
 
     @asyncio.coroutine
     def render_post(self, request):
+        """POST handler
+
+        This method parses the received JSON data as a service and updates the
+        directory with the new data.
+
+        :param request: The inbound CoAP request
+        :type request: aiocoap.Message
+        :return: A CoAP response
+        :rtype: aiocoap.Message
+        """
         self.log.debug('POST %r' % (request.opt.uri_path, ))
         if request.opt.content_format == media_types_rev['application/json']:
             self.log.debug('POST JSON: %r' % request.payload)
             try:
-                s = services.service_from_json(request.payload.decode('utf-8'))
-            except:
+                service = services.service_from_json(request.payload.decode('utf-8'))
+            except ValueError:
                 # bad input
                 payload = 'Invalid data, expected JSON service'
-                code = aiocoap.BAD_REQUEST
+                code = Code.BAD_REQUEST
             else:
-                if not s['name']:
+                if not service['name']:
                     # bad input
                     payload = 'Missing service name'
-                    code = aiocoap.BAD_REQUEST
+                    code = Code.BAD_REQUEST
                 else:
-                    if self._directory.service(name=s['name']):
-                        code = aiocoap.CHANGED
+                    try:
+                        self._directory.service(name=service['name'])
+                    except self._directory.DoesNotExist:
+                        code = Code.CREATED
                     else:
-                        code = aiocoap.CREATED
-                    self._directory.publish(service=s)
+                        code = Code.CHANGED
+
+                    self._directory.publish(service=service)
                     payload = 'POST OK'
         else:
-            code = aiocoap.UNSUPPORTED_MEDIA_TYPE
+            code = Code.UNSUPPORTED_MEDIA_TYPE
             payload = (
-                'Unknown Content-Format option: %u' %
+                'Unknown Content-Format option: %s' %
                 (request.opt.content_format, ))
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = media_types_rev['text/plain']
@@ -177,30 +200,49 @@ class UnpublishResource(Resource):
 
     @asyncio.coroutine
     def render_post(self, request):
+        """POST handler
+
+        This method parses the received JSON data as a service and tells the
+        directory to delete the given service.
+
+        :param request: The inbound CoAP request
+        :type request: aiocoap.Message
+        :return: A CoAP response
+        :rtype: aiocoap.Message
+        """
         if request.opt.content_format == aiocoap.numbers.media_types_rev[
                 'application/json']:
             self.log.debug('POST JSON: %r' % request.payload)
             try:
-                d = json.loads(request.payload.decode('utf-8'))
-            except:
+                data = json.loads(request.payload.decode('utf-8'))
+            except ValueError:
                 # bad input
                 payload = 'Invalid data, expected JSON: {"name":"servicename"}'
-                code = aiocoap.BAD_REQUEST
+                code = Code.BAD_REQUEST
             else:
-                self._directory.unpublish(name=d['name'])
+                self._directory.unpublish(name=data['name'])
                 payload = 'POST OK'
-                code = aiocoap.DELETED
+                code = Code.DELETED
         else:
-            code = aiocoap.UNSUPPORTED_MEDIA_TYPE
-            payload = 'Unknown Content-Format'
+            code = Code.UNSUPPORTED_MEDIA_TYPE
+            payload = (
+                'Unknown Content-Format option: %s' %
+                (request.opt.content_format, ))
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = media_types_rev['text/plain']
         return msg
 
     @asyncio.coroutine
     def render_get(self, request):
+        """GET handler, show usage help
+
+        :param request: The inbound CoAP request
+        :type request: aiocoap.Message
+        :return: A CoAP response
+        :rtype: aiocoap.Message
+        """
         payload = 'Unpublish a service, input payload JSON: {"name":"servicename123"}'
-        code = aiocoap.METHOD_NOT_ALLOWED
+        code = Code.METHOD_NOT_ALLOWED
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = media_types_rev['text/plain']
         return msg
@@ -211,33 +253,40 @@ class TypeResource(ServiceResource):
     type_url = '/type'
 
     def _render_typelist(self, request, tlist):
-        code = aiocoap.CONTENT
+        code = Code.CONTENT
         if request.opt.accept is None or request.opt.accept == media_types_rev[
                 'application/json']:
             # JSON by default
-            payload = json.dumps({'serviceType': tlist})
-            format = media_types_rev['application/json']
+            payload = json.dumps({'serviceType': list(tlist)})
+            content_format = media_types_rev['application/json']
         elif request.opt.accept == media_types_rev['application/link-format']:
             uri_base_str = '/' + '/'.join(request.prepath[:-1]) + self.type_url
             payload = ','.join(['<%s/%s>' % (uri_base_str, t) for t in tlist])
-            format = media_types_rev['application/link-format']
+            content_format = media_types_rev['application/link-format']
         else:
             # Unknown Accept format
             payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-            format = media_types_rev['text/plain']
-            code = aiocoap.NOT_ACCEPTABLE
+            content_format = media_types_rev['text/plain']
+            code = Code.NOT_ACCEPTABLE
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
-        msg.opt.content_format = format
+        msg.opt.content_format = content_format
         return msg
 
     @asyncio.coroutine
     def render_get(self, request):
+        """GET handler, return a list of types
+
+        :param request: The inbound CoAP request
+        :type request: aiocoap.Message
+        :return: A CoAP response
+        :rtype: aiocoap.Message
+        """
         name = '/'.join(request.postpath)
         if name:
-            slist = self._directory.types(type=name)
+            slist = self._directory.service_list(type=name)
             if not slist:
                 # Could not find a service by that name, send response code
-                return aiocoap.Message(code=aiocoap.NOT_FOUND, payload='')
+                return aiocoap.Message(code=Code.NOT_FOUND, payload='')
             return self._render_servicelist(request, slist)
         else:
             tlist = self._directory.types()

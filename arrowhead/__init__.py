@@ -1,21 +1,13 @@
-# Top level Arrowhead package
-__version__ = '0.1.0-alpha'
+"""This module provides a Python API for interacting with Arrowhead services"""
 
-"""Modules for interacting with Arrowhead services
-
-"""
-
-# Set default logging handler to avoid "No handler found" warnings.
 import logging
-try:  # Python 2.7+
-    from logging import NullHandler
-except ImportError:
-    class NullHandler(logging.Handler):
-
-        def emit(self, record):
-            pass
-logging.getLogger(__name__).addHandler(NullHandler())
-
-__all__ = ['services', 'logging']
+from logging import NullHandler
 
 from . import services, log
+
+# Set default logging handler to avoid "No handler found" warnings.
+logging.getLogger(__name__).addHandler(NullHandler())
+
+__version__ = '0.1.0-alpha'
+
+__all__ = ['services', 'logging']

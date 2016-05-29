@@ -1,13 +1,14 @@
-import pytest
-from arrowhead import services
+"""Unit tests for arrowhead.services"""
 try:
     import json
 except ImportError:
     import simplejson as json
-
 import xml.etree.ElementTree as ET
 
-example_services = {
+import pytest
+from arrowhead import services
+
+EXAMPLE_SERVICES = {
     'SingleService1': {
         'service': {
             "name": "orchestration-store._orch-s-ws-https._tcp.srv.arces.unibo.it.",
@@ -79,7 +80,7 @@ example_services = {
     }
 }
 
-@pytest.mark.parametrize('testcase', example_services.items(), ids=(lambda x: str(x[0])))
+@pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_dict(testcase):
     '''Verify that all basic service information gets set by the constructor'''
     # testcase is a tuple (testname, indata)
@@ -91,7 +92,7 @@ def test_service_dict(testcase):
         assert name in s['properties']
         assert value == s['properties'][name]
 
-@pytest.mark.parametrize('testcase', example_services.items(), ids=(lambda x: str(x[0])))
+@pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_to_json(testcase):
     '''Loading the output from as_json should give the same dict as the input data'''
     # testcase is a tuple (testname, indata)
@@ -100,7 +101,7 @@ def test_service_to_json(testcase):
     js = services.service_to_json(s)
     sd = json.loads(js)
     assert set(sd.keys()) == set(indata_dict.keys())
-    for key in (sd.keys() - ['properties']):
+    for key in sd.keys() - ['properties']:
         assert indata_dict[key] == sd[key]
     props = {}
     for prop in sd['properties']['property']:
@@ -110,7 +111,7 @@ def test_service_to_json(testcase):
         assert name in props
         assert props[name] == value
 
-@pytest.mark.parametrize('testcase', example_services.items(), ids=(lambda x: str(x[0])))
+@pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_to_xml(testcase):
     '''as_xml should give an xml representation of the service'''
     # testcase is a tuple (testname, indata)
@@ -154,7 +155,7 @@ def test_service_to_xml(testcase):
     assert not root.text or root.text.isspace()
     assert not root.tail or root.tail.isspace()
 
-@pytest.mark.parametrize('testcase', example_services.items(), ids=(lambda x: str(x[0])))
+@pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_from_json(testcase):
     '''service_parse_json should create a Service instance from JSON text'''
     # testcase is a tuple (testname, testdata)

@@ -257,11 +257,11 @@ class TypeResource(ServiceResource):
         if request.opt.accept is None or request.opt.accept == media_types_rev[
                 'application/json']:
             # JSON by default
-            payload = json.dumps({'serviceType': list(tlist)})
+            payload = services.typelist_to_json(tlist)
             content_format = media_types_rev['application/json']
         elif request.opt.accept == media_types_rev['application/link-format']:
             uri_base_str = '/' + '/'.join(request.prepath[:-1]) + self.type_url
-            payload = ','.join(['<%s/%s>' % (uri_base_str, t) for t in tlist])
+            payload = services.typelist_to_corelf(tlist, uri_base_str)
             content_format = media_types_rev['application/link-format']
         else:
             # Unknown Accept format
@@ -291,3 +291,29 @@ class TypeResource(ServiceResource):
         else:
             tlist = self._directory.types()
             return self._render_typelist(request, tlist)
+
+
+class Server(ParentSite):
+    """CoAP server implementation"""
+
+    def __init__(self, *, directory, **kwargs):
+        """Constructor
+
+        :param directory: Service directory to use as backend
+        :type directory: arrowhead.servicedirectory.ServiceDirectory
+        """
+        self._directory = directory
+        self.site = ParentSite()
+        self.context = aiocoap.Context.create_server_context(self.site, **kwargs)
+
+        self.site.add_resource(('.well-known', 'core'),
+            resource.WKCResource(self.site.get_resources_as_linkheader))
+
+        self.site.add_resource(('servicediscovery', 'service'),
+            ServiceResource(directory=directory))
+        self.site.add_resource(('servicediscovery', 'publish'),
+            PublishResource(directory=directory))
+        self.site.add_resource(('servicediscovery', 'unpublish'),
+            UnpublishResource(directory=directory))
+        self.site.add_resource(('servicediscovery', 'type'),
+            TypeResource(directory=directory))

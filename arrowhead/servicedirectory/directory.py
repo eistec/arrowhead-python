@@ -69,7 +69,7 @@ class ServiceDirectory(LogMixin, object):
             self._db = database
         self._config = {}
         self.log.info('Directory initialized')
-        self.log.debug('config: %r', [(k, v) for k,v in self._config.items()])
+        self.log.debug('config: %r', [(k, v) for k, v in self._config.items()])
         self._notify_set = set()
 
     def _get_config_value(self, key):
@@ -77,7 +77,8 @@ class ServiceDirectory(LogMixin, object):
 
         :param key: the key to look up
         :type key: string
-        :returns: The configuration value, or a default value if the key was not found in the database
+        :returns: The configuration value, or a default value if the key was not
+            found in the database
         :rtype: varies
         """
         value = self._config.get(key, self.config_defaults[key])
@@ -120,8 +121,8 @@ class ServiceDirectory(LogMixin, object):
     def _call_notify(self):
         """Call all registered callbacks"""
         self.prune_old_services()
-        for cb in self._notify_set:
-            cb(self)
+        for func in self._notify_set:
+            func(self)
 
     def publish(self, *, service):
         """Publish a service in the registry
@@ -152,8 +153,8 @@ class ServiceDirectory(LogMixin, object):
 
         The service entry will be deleted from the registry if found.
 
-        :param service: The name of the service to delete
-        :type service: string
+        :param name: The name of the service to delete
+        :type name: string
         """
         self.log.debug('unpublish: %s' % (name, ))
         service = self._db.get(self.Service, {'name': name})
@@ -174,18 +175,19 @@ class ServiceDirectory(LogMixin, object):
         try:
             service = self._db.get(self.Service, {'name': name})
         except self.Service.DoesNotExist:
-            raise self.DoesNotExist('Not found: %s'.format(name,))
+            raise self.DoesNotExist('Not found: {}'.format(name))
         return dict(service.attributes.copy())
 
-    def service_list(self, *args, **kwargs):
+    def service_list(self, *args, **search):
         """Get a list of services matching the given criteria
 
         Use an empty criteria to list all services.
 
+        :param args: Positional arguments are discarded
         :param search: Search criteria as key: value pairs
         :type search: dict
         """
-        self.log.debug('list %r', kwargs)
+        self.log.debug('list %r', search)
         now = unix_now()
         # Find all services with deadline >= now
         services = self._db.filter(self.Service, {'deadline': {'$gte': now}})

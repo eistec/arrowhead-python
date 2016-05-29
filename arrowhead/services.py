@@ -221,3 +221,26 @@ def servicelist_to_corelf(slist, uri_base):
     :rtype: string
     """
     return ','.join(['<%s/%s>' % (uri_base, s['name']) for s in slist])
+
+def typelist_to_json(tlist):
+    """Convert a list of service dicts to a JSON string
+
+    :param tlist: List of service types to convert
+    :type tlist: iterable
+    :returns: The service list encoded as a JSON string
+    :rtype: string
+    """
+    return json.dumps({'serviceType': list(tlist)})
+
+
+def typelist_to_corelf(tlist, uri_base):
+    """Convert a list of services to a CoRE Link-format (:rfc:`6690`) string
+
+    :param tlist: List of service types to convert
+    :type tlist: iterable
+    :param uri_base: Base URI for the links
+    :type uri_base: string
+    :returns: The service list encoded as an application/link-format string
+    :rtype: string
+    """
+    return ','.join(['<%s/%s>' % (uri_base, t) for t in tlist])

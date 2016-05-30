@@ -302,18 +302,24 @@ class Server(ParentSite):
         :param directory: Service directory to use as backend
         :type directory: arrowhead.servicedirectory.ServiceDirectory
         """
+        super().__init__()
         self._directory = directory
         self.site = ParentSite()
         self.context = aiocoap.Context.create_server_context(self.site, **kwargs)
 
-        self.site.add_resource(('.well-known', 'core'),
+        self.site.add_resource(
+            ('.well-known', 'core'),
             resource.WKCResource(self.site.get_resources_as_linkheader))
 
-        self.site.add_resource(('servicediscovery', 'service'),
+        self.site.add_resource(
+            ('servicediscovery', 'service'),
             ServiceResource(directory=directory))
-        self.site.add_resource(('servicediscovery', 'publish'),
+        self.site.add_resource(
+            ('servicediscovery', 'publish'),
             PublishResource(directory=directory))
-        self.site.add_resource(('servicediscovery', 'unpublish'),
+        self.site.add_resource(
+            ('servicediscovery', 'unpublish'),
             UnpublishResource(directory=directory))
-        self.site.add_resource(('servicediscovery', 'type'),
+        self.site.add_resource(
+            ('servicediscovery', 'type'),
             TypeResource(directory=directory))

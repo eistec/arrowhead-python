@@ -52,12 +52,13 @@ class Server(LogMixin, web.Application):
             not be matched against any of the available produced types.
         """
 
-        client_acceptables = [accept.split(';')[0]
-            for accept in ','.join(request.headers.getall('ACCEPT', [])).split(',')]
+        client_acceptables = [
+            accept.split(';')[0] for accept in
+            ','.join(request.headers.getall('ACCEPT', [])).split(',')]
 
         self.log.info('acceptables: %r', client_acceptables)
-        if len(client_acceptables) == 0 or (len(client_acceptables) == 1
-            and len(client_acceptables[0]) == 0):
+        if len(client_acceptables) == 0 or (
+                len(client_acceptables) == 1 and len(client_acceptables[0]) == 0):
             return None
         for accept in client_acceptables:
             for content_type in content_types:
@@ -77,6 +78,8 @@ class Server(LogMixin, web.Application):
         :type request: aiohttp.Request
         :param content_handlers: Content-type => handler mappings
         :type content_handlers: dict('content_type': callable)
+        :param args: Extra positional arguments to pass on to content handler
+        :param kwargs: Extra keyword arguments to pass on to content handler
         :returns: A HTTP response
         :rtype: aiohttp.web.Response
         """
@@ -124,7 +127,7 @@ class Server(LogMixin, web.Application):
             'application/json': services.service_to_json,
             'application/xml': services.service_to_xml,
         }
-        name = request.match_info.get('name','(null)')
+        name = request.match_info.get('name', '(null)')
         service = self._directory.service(name=name)
         return self.dispatch_request(request, content_handlers, service)
 
@@ -157,7 +160,7 @@ class Server(LogMixin, web.Application):
             'application/json': services.servicelist_to_json,
             'application/xml': services.servicelist_to_xml,
         }
-        name = request.match_info.get('name','(null)')
+        name = request.match_info.get('name', '(null)')
         slist = self._directory.service_list(type=name)
         if not slist:
             raise web.HTTPNotFound()

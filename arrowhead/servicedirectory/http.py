@@ -56,7 +56,8 @@ class Server(LogMixin, web.Application):
             for accept in ','.join(request.headers.getall('ACCEPT', [])).split(',')]
 
         self.log.info('acceptables: %r', client_acceptables)
-        if len(client_acceptables) == 0:
+        if len(client_acceptables) == 0 or (len(client_acceptables) == 1
+            and len(client_acceptables[0]) == 0):
             return None
         for accept in client_acceptables:
             for content_type in content_types:
@@ -83,7 +84,7 @@ class Server(LogMixin, web.Application):
         if content_type is None:
             # Missing Accept: header, pick arbitrary handler
             self.log.info('Request is missing Accept headers')
-            content_type = content_handlers.keys()[0]
+            content_type = list(content_handlers.keys())[0]
         self.log.debug('Content-type: %s', content_type)
         handler = content_handlers[content_type]
         payload = handler(*args, **kwargs)

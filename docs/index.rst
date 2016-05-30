@@ -6,7 +6,10 @@
 Welcome to Arrowhead's documentation!
 =====================================
 
-Contents:
+.. include:: ../README.rst
+
+API documentation
+=================
 
 .. toctree::
    :maxdepth: 2

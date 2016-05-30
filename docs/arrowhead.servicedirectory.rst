@@ -20,6 +20,14 @@ arrowhead.servicedirectory.directory module
     :undoc-members:
     :show-inheritance:
 
+arrowhead.servicedirectory.http module
+--------------------------------------
+
+.. automodule:: arrowhead.servicedirectory.http
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

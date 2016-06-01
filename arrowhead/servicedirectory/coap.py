@@ -4,7 +4,12 @@ import asyncio
 try:
     import json
 except ImportError:
-    import simplejson as json
+    try:
+        import simplejson as json
+    except ImportError:
+        HAVE_JSON = False
+else:
+    HAVE_JSON = True
 
 import aiocoap.resource as resource
 from aiocoap.numbers import media_types_rev
@@ -16,26 +21,18 @@ from ..log import LogMixin
 from .. import services
 
 __all__ = [
-    'Resource',
     'ParentSite',
     'ServiceResource',
+    'TypeResource',
     'PublishResource',
     'UnpublishResource']
 
 URI_PATH_SEPARATOR = '/'
 
 
-class ObservableResource(LogMixin, resource.ObservableResource):
-    """plain aiocoap.resource.ObservableResource with added LogMixin"""
-
-
-class Resource(LogMixin, resource.Resource):
-    """plain aiocoap.resource.Resource with added LogMixin"""
-
-
 class ParentSite(LogMixin, resource.Site):
-    '''CoAP Site resource which sends the request to the closest parent if the
-    exact resource specified in the URL was not found'''
+    """CoAP Site resource which sends the request to the closest parent if the
+    exact resource specified in the URL was not found"""
 
     @asyncio.coroutine
     def render(self, request):
@@ -57,7 +54,7 @@ class ParentSite(LogMixin, resource.Site):
         raise aiocoap.error.NoResource()
 
 
-class ServiceResource(ObservableResource):
+class ServiceResource(LogMixin, resource.ObservableResource):
     """/service resource"""
     service_url = '/service'
 
@@ -67,12 +64,13 @@ class ServiceResource(ObservableResource):
         self._directory.add_notify_callback(self.notify)
         self.notify()
 
-    def notify(self, directory=None):
+    def notify(self):
         """Send notifications to all registered subscribers"""
         self.log.debug('Notifying subscribers')
         self.updated_state()
 
-    def _render_service(self, request, service):
+    @staticmethod
+    def _render_service(request, service):
         code = Code.CONTENT
         if request.opt.accept is None or request.opt.accept == media_types_rev[
                 'application/json']:
@@ -138,7 +136,7 @@ class ServiceResource(ObservableResource):
             return self._render_servicelist(request, slist)
 
 
-class PublishResource(Resource):
+class PublishResource(LogMixin, resource.Resource):
     """/publish resource"""
 
     def __init__(self, directory):
@@ -191,12 +189,28 @@ class PublishResource(Resource):
         return msg
 
 
-class UnpublishResource(Resource):
+class UnpublishResource(LogMixin, resource.Resource):
     """/unpublish resource"""
 
     def __init__(self, directory):
         super().__init__()
         self._directory = directory
+
+    def _unpublish_json(self, request):
+        self.log.debug('POST JSON: %r' % request.payload)
+        try:
+            data = json.loads(request.payload.decode('utf-8'))
+        except ValueError:
+            # bad input
+            payload = 'Invalid data, expected JSON: {"name":"servicename"}'
+            code = Code.BAD_REQUEST
+        else:
+            self._directory.unpublish(name=data['name'])
+            payload = 'POST OK'
+            code = Code.DELETED
+        msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
+        msg.opt.content_format = media_types_rev['text/plain']
+        return msg
 
     @asyncio.coroutine
     def render_post(self, request):
@@ -210,30 +224,26 @@ class UnpublishResource(Resource):
         :return: A CoAP response
         :rtype: aiocoap.Message
         """
-        if request.opt.content_format == aiocoap.numbers.media_types_rev[
-                'application/json']:
-            self.log.debug('POST JSON: %r' % request.payload)
-            try:
-                data = json.loads(request.payload.decode('utf-8'))
-            except ValueError:
-                # bad input
-                payload = 'Invalid data, expected JSON: {"name":"servicename"}'
-                code = Code.BAD_REQUEST
-            else:
-                self._directory.unpublish(name=data['name'])
-                payload = 'POST OK'
-                code = Code.DELETED
-        else:
+        content_handlers = {
+            media_types_rev['application/json']: self._unpublish_json
+            }
+
+        try:
+            handler = content_handlers[request.opt.content_format]
+        except KeyError:
             code = Code.UNSUPPORTED_MEDIA_TYPE
             payload = (
                 'Unknown Content-Format option: %s' %
                 (request.opt.content_format, ))
-        msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
-        msg.opt.content_format = media_types_rev['text/plain']
-        return msg
+            msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
+            msg.opt.content_format = media_types_rev['text/plain']
+            return msg
+        else:
+            return handler(request)
 
     @asyncio.coroutine
-    def render_get(self, request):
+    @staticmethod
+    def render_get(request): # pylint: disable=unused-argument
         """GET handler, show usage help
 
         :param request: The inbound CoAP request

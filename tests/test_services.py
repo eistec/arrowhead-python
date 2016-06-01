@@ -1,8 +1,5 @@
 """Unit tests for arrowhead.services"""
-try:
-    import json
-except ImportError:
-    import simplejson as json
+import json
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -121,29 +118,29 @@ def test_service_dict(testcase):
     '''Verify that all basic service information gets set by the constructor'''
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
-    s = services.service_dict(**indata_dict)
+    service = services.service_dict(**indata_dict)
     for attr in indata_dict.keys() - ['properties']:
-        assert s[attr] == indata_dict[attr]
+        assert service[attr] == indata_dict[attr]
     for name, value in indata_dict['properties'].items():
-        assert name in s['properties']
-        assert value == s['properties'][name]
+        assert name in service['properties']
+        assert value == service['properties'][name]
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_to_json(testcase):
     '''Loading the output from as_json should give the same dict as the input data'''
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
-    s = services.service_dict(**indata_dict)
-    js = services.service_to_json(s)
-    sd = json.loads(js)
-    assert set(sd.keys()) == set(indata_dict.keys())
-    for key in sd.keys() - ['properties']:
-        assert indata_dict[key] == sd[key]
+    expected_dict = indata_dict
+    service_json = services.service_to_json(indata_dict)
+    service = json.loads(service_json)
+    assert set(service.keys()) == set(expected_dict.keys())
+    for key in service.keys() - ['properties']:
+        assert expected_dict[key] == service[key]
     props = {}
-    for prop in sd['properties']['property']:
+    for prop in service['properties']['property']:
         assert prop['name'] not in props
         props[prop['name']] = prop['value']
-    for name, value in indata_dict['properties'].items():
+    for name, value in expected_dict['properties'].items():
         assert name in props
         assert props[name] == value
 
@@ -186,7 +183,7 @@ def test_service_to_xml(testcase):
         assert node.text.strip()
         assert node.text.strip() == str(indata_dict[node.tag])
         service[node.tag] = node.text.strip()
-        if (node.tag == 'port'):
+        if node.tag == 'port':
             service[node.tag] = int(service[node.tag])
         assert not list(node)
     # Check that there is no garbage text around
@@ -204,12 +201,12 @@ def test_service_from_json(testcase):
     # testcase is a tuple (testname, testdata)
     json_input = testcase[1]['as_json']
     expected_dict = testcase[1]['service']
-    s = services.service_from_json(json_input)
+    service = services.service_from_json(json_input)
     for key in expected_dict.keys() - ['properties']:
-        assert s[key] == expected_dict[key]
+        assert service[key] == expected_dict[key]
     for name, value in expected_dict['properties'].items():
-        assert name in s['properties']
-        assert value == s['properties'][name]
+        assert name in service['properties']
+        assert value == service['properties'][name]
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_from_xml(testcase):

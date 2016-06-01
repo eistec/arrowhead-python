@@ -21,17 +21,17 @@ class Server(LogMixin, web.Application):
         self._directory = directory
 
         self._service_list_res = self.router.add_resource('/servicediscovery/service')
-        self._service_list_res.add_route('GET', self.service_list_GET)
+        self._service_list_res.add_route('GET', self.service_list_get)
         self._service_res = self.router.add_resource('/servicediscovery/service/{name}')
-        self._service_res.add_route('GET', self.service_GET)
+        self._service_res.add_route('GET', self.service_get)
         self._type_list_res = self.router.add_resource('/servicediscovery/type')
-        self._type_list_res.add_route('GET', self.type_list_GET)
+        self._type_list_res.add_route('GET', self.type_list_get)
         self._type_res = self.router.add_resource('/servicediscovery/type/{name}')
-        self._type_res.add_route('GET', self.type_GET)
+        self._type_res.add_route('GET', self.type_get)
         self._publish_res = self.router.add_resource('/servicediscovery/publish')
-        self._publish_res.add_route('POST', self.publish_POST)
+        self._publish_res.add_route('POST', self.publish_post)
         self._unpublish_res = self.router.add_resource('/servicediscovery/unpublish')
-        self._unpublish_res.add_route('POST', self.unpublish_POST)
+        self._unpublish_res.add_route('POST', self.unpublish_post)
         self.log.debug('HTTP directory starting')
 
     def parse_accept(self, request, content_types):
@@ -92,11 +92,12 @@ class Server(LogMixin, web.Application):
         handler = content_handlers[content_type]
         payload = handler(*args, **kwargs)
         charset = 'utf-8'
-        return web.Response(body=payload.encode(charset),
-            content_type=content_type, charset=charset)
+        return web.Response(
+            body=payload.encode(charset), content_type=content_type,
+            charset=charset)
 
     @asyncio.coroutine
-    def service_list_GET(self, request):
+    def service_list_get(self, request):
         """Generate a service list response
 
         :param request: incoming HTTP request
@@ -112,7 +113,7 @@ class Server(LogMixin, web.Application):
         return self.dispatch_request(request, content_handlers, slist)
 
     @asyncio.coroutine
-    def service_GET(self, request):
+    def service_get(self, request):
         """Generate a service response
 
         :param request: incoming HTTP request
@@ -129,7 +130,7 @@ class Server(LogMixin, web.Application):
         return self.dispatch_request(request, content_handlers, service)
 
     @asyncio.coroutine
-    def type_list_GET(self, request):
+    def type_list_get(self, request):
         """Generate a service type list response
 
         :param request: incoming HTTP request
@@ -145,7 +146,7 @@ class Server(LogMixin, web.Application):
         return self.dispatch_request(request, content_handlers, tlist)
 
     @asyncio.coroutine
-    def type_GET(self, request):
+    def type_get(self, request):
         """Generate a service list response for the given service type
 
         :param request: incoming HTTP request
@@ -164,7 +165,7 @@ class Server(LogMixin, web.Application):
         return self.dispatch_request(request, content_handlers, slist)
 
     @asyncio.coroutine
-    def publish_POST(self, request):
+    def publish_post(self, request):
         """Register a service in the service directory
 
         :param request: incoming HTTP request
@@ -180,7 +181,8 @@ class Server(LogMixin, web.Application):
             handler = content_handlers[request.content_type]
         except KeyError:
             self.log.info('Unhandled Content-Type: %s', request.content_type)
-            raise web.HTTPUnsupportedMediaType(reason='Unhandled Content-Type: %s' % request.content_type)
+            raise web.HTTPUnsupportedMediaType(
+                reason='Unhandled Content-Type: %s' % request.content_type)
 
         try:
             text = yield from request.text()
@@ -203,11 +205,12 @@ class Server(LogMixin, web.Application):
 
             self._directory.publish(service=service)
             payload = 'Publish OK'
-            return web.Response(body=payload.encode('utf-8'), status=code,
+            return web.Response(
+                body=payload.encode('utf-8'), status=code,
                 content_type='text/plain', charset='utf-8')
 
     @asyncio.coroutine
-    def unpublish_POST(self, request):
+    def unpublish_post(self, request):
         """De-register a service in the service directory
 
         :param request: incoming HTTP request
@@ -223,7 +226,8 @@ class Server(LogMixin, web.Application):
             handler = content_handlers[request.content_type]
         except KeyError:
             self.log.info('Unhandled Content-Type: %s', request.content_type)
-            raise web.HTTPUnsupportedMediaType(reason='Unhandled Content-Type: %s' % request.content_type)
+            raise web.HTTPUnsupportedMediaType(
+                reason='Unhandled Content-Type: %s' % request.content_type)
 
         try:
             text = yield from request.text()
@@ -246,5 +250,6 @@ class Server(LogMixin, web.Application):
         self.log.info('Unpublish %s OK', name)
         payload = 'Unpublish OK'
         code = web.HTTPOk.status_code
-        return web.Response(body=payload.encode('utf-8'), status=code,
+        return web.Response(
+            body=payload.encode('utf-8'), status=code,
             content_type='text/plain', charset='utf-8')

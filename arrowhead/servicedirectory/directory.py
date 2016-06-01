@@ -26,7 +26,7 @@ class DirectoryException(Exception):
 class DoesNotExist(DirectoryException):
     """Service not found in directory"""
 
-class Directory(LogMixin, object):
+class Directory(LogMixin, object): # pylint: disable=too-few-public-methods
     """Directory base class"""
 
     DoesNotExist = DoesNotExist
@@ -80,7 +80,7 @@ class ServiceDirectory(Directory):
     class Service(blitzdb.Document):
         """Service database storage class"""
 
-        class Meta(blitzdb.Document.Meta):
+        class Meta(blitzdb.Document.Meta): # pylint: disable=too-few-public-methods
             """Database backend configuration metadata"""
             primary_key = 'name' #use the name of the service as the primary key
 
@@ -126,7 +126,7 @@ class ServiceDirectory(Directory):
         """Call all registered callbacks"""
         self.prune_old_services()
         for func in self._notify_set:
-            func(self)
+            func()
 
     def publish(self, *, service):
         """Publish a service in the registry
@@ -185,12 +185,11 @@ class ServiceDirectory(Directory):
             raise self.DoesNotExist('Not found: {}'.format(name))
         return dict(service.attributes.copy())
 
-    def service_list(self, *args, **search):
+    def service_list(self, **search):
         """Get a list of services matching the given criteria
 
         Use an empty criteria to list all services.
 
-        :param args: Positional arguments are discarded
         :param search: Search criteria as key: value pairs
         :type search: dict
         """

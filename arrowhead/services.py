@@ -127,6 +127,39 @@ def service_to_xml(service):
     return xml_str
 
 if HAVE_XML:
+    def _service_parse_xml_props(node):
+        """Parse the ``<properties>`` XML tag
+
+        :param node: XML ``<properties>`` node
+        :type node: xml.etree.ElementTree.Element
+        :returns: Parsed properties as key=>value pairs
+        :rtype: dict
+        """
+        props = {}
+        for child_node in node:
+            if child_node.tag != 'property':
+                # ignoring any unknown tags
+                continue
+            values = {'name': None, 'value': None}
+            for child_prop in child_node:
+                if child_prop.tag in values:
+                    if values[child_prop.tag] is not None:
+                        raise ServiceError(
+                            "Multiple occurrence of property tag <%s>: '%s', '%s'" %
+                            child_prop.tag, values[child_prop.tag], child_prop.text)
+                    values[child_prop.tag] = child_prop.text.strip()
+                # ignoring any unknown tags
+            for key, value in values.items():
+                if value is None:
+                    raise ServiceError(
+                        "Missing property %s" % (key, ))
+            if values['name'] in props:
+                raise ServiceError(
+                    "Multiple occurrence of property '%s': '%s', '%s'" %
+                    values['name'], props[values['name']], values['value'])
+            props[values['name']] = values['value']
+        return props
+
     def service_from_xml(xmlstr):
         """Convert XML representation of service to service dict"""
         res = service_dict()
@@ -140,42 +173,14 @@ if HAVE_XML:
                 raise ServiceError(
                     "Multiple occurrence of tag <%s>" %
                     node.tag, res[node.tag], node.text)
-            if node.tag in SERVICE_ATTRIBUTES:
+            if node.tag == 'properties':
+                props = _service_parse_xml_props(node)
+                res['properties'] = props
+            elif node.tag in SERVICE_ATTRIBUTES:
                 res[node.tag] = node.text.strip()
-                if (node.tag == 'port'):
+                if node.tag == 'port':
                     res[node.tag] = int(res[node.tag])
                 # ignoring any XML attributes or child nodes
-            elif node.tag == 'properties':
-                props = {}
-                for child_node in node:
-                    if child_node.tag != 'property':
-                        # ignoring any unknown tags
-                        continue
-                    name = None
-                    value = None
-                    for child_prop in child_node:
-                        if child_prop.tag == 'name':
-                            if name is not None:
-                                raise ServiceError(
-                                    "Multiple occurrence of property tag <%s>" %
-                                    child_prop.tag, child_prop.tag, child_prop.text)
-                            name = child_prop.text.strip()
-                        elif child_prop.tag == 'value':
-                            if value is not None:
-                                raise ServiceError(
-                                    "Multiple occurrence of property tag <%s>" %
-                                    child_prop.tag, child_prop.tag, child_prop.text)
-                            value = child_prop.text.strip()
-                        # ignoring any unknown tags
-                    if not name:
-                        raise ServiceError(
-                            "Missing property name (value=%s)" % value)
-                    if name in props:
-                        raise ServiceError(
-                            "Multiple occurrence of property '%s'" %
-                            name, name, value, props[name])
-                    props[name] = value
-                res['properties'] = props
             # ignoring any unknown tags
         return res
 

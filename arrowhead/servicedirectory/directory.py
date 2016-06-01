@@ -150,6 +150,7 @@ class ServiceDirectory(Directory):
         self._db.commit()
         service_entry = self.Service(scopy)
         self._db.save(service_entry)
+        self._db.commit()
         self._call_notify()
 
     def unpublish(self, *, name):

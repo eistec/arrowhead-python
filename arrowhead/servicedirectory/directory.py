@@ -31,6 +31,9 @@ class Directory(LogMixin, object): # pylint: disable=too-few-public-methods
 
     DoesNotExist = DoesNotExist
 
+    config_defaults = {}
+    """Default configuration items, override in subclass"""
+
     def __init__(self, database=None):
         """Constructor
 

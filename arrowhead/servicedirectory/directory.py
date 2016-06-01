@@ -26,21 +26,10 @@ class DirectoryException(Exception):
 class DoesNotExist(DirectoryException):
     """Service not found in directory"""
 
-class ServiceDirectory(LogMixin, object):
-    """Service directory main class"""
-
-    class Service(blitzdb.Document):
-        """Service database storage class"""
-
-        class Meta(blitzdb.Document.Meta):
-            """Database backend configuration metadata"""
-            primary_key = 'name' #use the name of the service as the primary key
+class Directory(LogMixin, object):
+    """Directory base class"""
 
     DoesNotExist = DoesNotExist
-
-    config_defaults = {
-        'ttl': 30 * 60
-        }
 
     def __init__(self, database=None):
         """Constructor
@@ -84,6 +73,21 @@ class ServiceDirectory(LogMixin, object):
         value = self._config.get(key, self.config_defaults[key])
         self.log.debug('Config get: %s => %r', key, value)
         return value
+
+class ServiceDirectory(Directory):
+    """Service directory main class"""
+
+    class Service(blitzdb.Document):
+        """Service database storage class"""
+
+        class Meta(blitzdb.Document.Meta):
+            """Database backend configuration metadata"""
+            primary_key = 'name' #use the name of the service as the primary key
+
+    config_defaults = {
+        'lifetime': 30 * 60
+        }
+
 
     def prune_old_services(self):
         """Delete all service entries that have timed out"""
@@ -136,9 +140,9 @@ class ServiceDirectory(LogMixin, object):
         # Add last updated time stamp and refresh deadline
         scopy = service.copy()
         now = unix_now()
-        ttl = self._get_config_value('ttl')
+        lifetime = self._get_config_value('lifetime')
         scopy['updated'] = now
-        scopy['deadline'] = now + ttl
+        scopy['deadline'] = now + lifetime
         self.log.debug('publish: %r', scopy)
         old_service = self._db.filter(self.Service, {'name': service['name']})
         self.log.debug('remove %r', [s for s in old_service])

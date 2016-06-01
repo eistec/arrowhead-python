@@ -152,44 +152,49 @@ def test_service_to_xml(testcase):
     '''as_xml should give an xml representation of the service'''
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
-    s = services.service_dict(**indata_dict)
-    sx = services.service_to_xml(s)
-    root = ET.fromstring(sx)
+    expected_dict = indata_dict
+    service_xml = services.service_to_xml(indata_dict)
+    root = ET.fromstring(service_xml)
     assert root.tag == 'service'
-    s = {}
-    for child in root:
-        assert not child.attrib
-        assert not child.tail or child.tail.isspace()
-        assert child.tag not in s
-        if child.tag == 'properties':
+    service = {}
+    for node in root:
+        assert not node.attrib
+        assert not node.tail or node.tail.isspace()
+        assert node.tag not in service
+        if node.tag == 'properties':
             props = {}
-            for c in child:
-                assert c.tag == 'property'
+            for child in node:
+                assert child.tag == 'property'
                 name = None
                 value = None
-                for pc in c:
-                    assert not list(pc)
-                    assert not pc.tail or pc.tail.isspace()
-                    assert pc.text.strip()
-                    if pc.tag == 'name':
+                for prop in child:
+                    assert not list(prop)
+                    assert not prop.tail or prop.tail.isspace()
+                    assert prop.text.strip()
+                    assert prop.tag in ('name', 'value')
+                    if prop.tag == 'name':
                         assert name is None
-                        name = pc.text.strip()
-                    elif pc.tag == 'value':
+                        name = prop.text.strip()
+                    elif prop.tag == 'value':
                         assert value is None
-                        value = pc.text.strip()
-                    else:
-                        assert 0
+                        value = prop.text.strip()
+
                 assert name not in props
                 props[name] = value
-            s['properties'] = props
+            service['properties'] = props
             continue
-        assert child.text.strip()
-        assert child.text.strip() == str(indata_dict[child.tag])
-        s[child.tag] = child.text.strip()
-        assert not list(child)
+        assert node.text.strip()
+        assert node.text.strip() == str(indata_dict[node.tag])
+        service[node.tag] = node.text.strip()
+        assert not list(node)
     # Check that there is no garbage text around
     assert not root.text or root.text.isspace()
     assert not root.tail or root.tail.isspace()
+    for key in expected_dict.keys() - ['properties']:
+        assert service[key] == expected_dict[key]
+    for name, value in expected_dict['properties'].items():
+        assert name in service['properties']
+        assert value == service['properties'][name]
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_from_json(testcase):
@@ -216,4 +221,3 @@ def test_service_from_xml(testcase):
     for name, value in expected_dict['properties'].items():
         assert name in s['properties']
         assert str(value) == str(s['properties'][name])
-

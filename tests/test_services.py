@@ -186,6 +186,8 @@ def test_service_to_xml(testcase):
         assert node.text.strip()
         assert node.text.strip() == str(indata_dict[node.tag])
         service[node.tag] = node.text.strip()
+        if (node.tag == 'port'):
+            service[node.tag] = int(service[node.tag])
         assert not list(node)
     # Check that there is no garbage text around
     assert not root.text or root.text.isspace()
@@ -215,9 +217,9 @@ def test_service_from_xml(testcase):
     # testcase is a tuple (testname, testdata)
     xml_input = testcase[1]['as_xml']
     expected_dict = testcase[1]['service']
-    s = services.service_from_xml(xml_input)
+    service = services.service_from_xml(xml_input)
     for key in expected_dict.keys() - ['properties']:
-        assert str(s[key]) == str(expected_dict[key])
+        assert service[key] == expected_dict[key]
     for name, value in expected_dict['properties'].items():
-        assert name in s['properties']
-        assert str(value) == str(s['properties'][name])
+        assert name in service['properties']
+        assert value == service['properties'][name]

@@ -130,7 +130,10 @@ if HAVE_XML:
     def service_from_xml(xmlstr):
         """Convert XML representation of service to service dict"""
         res = service_dict()
-        root = ET.fromstring(xmlstr)
+        try:
+            root = ET.fromstring(xmlstr)
+        except ET.ParseError:
+            raise ValueError('Invalid XML service')
         for node in root:
             if node.tag in res and res[node.tag]:
                 # disallow multiple occurrences of the same tag

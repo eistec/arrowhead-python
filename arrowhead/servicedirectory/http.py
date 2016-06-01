@@ -28,10 +28,10 @@ class Server(LogMixin, web.Application):
         self._type_list_res.add_route('GET', self.type_list_GET)
         self._type_res = self.router.add_resource('/servicediscovery/type/{name}')
         self._type_res.add_route('GET', self.type_GET)
-#        self._publish_res = self.router.add_resource('/servicediscovery/publish')
-#        self._publish_res.add_route('POST', self.publish_POST)
-#        self._unpublish_res = self.router.add_resource('/servicediscovery/unpublish')
-#        self._unpublish_res.add_route('POST', self.unpublish_POST)
+        self._publish_res = self.router.add_resource('/servicediscovery/publish')
+        self._publish_res.add_route('POST', self.publish_POST)
+        self._unpublish_res = self.router.add_resource('/servicediscovery/unpublish')
+        self._unpublish_res.add_route('POST', self.unpublish_POST)
         self.log.debug('HTTP directory starting')
 
     def parse_accept(self, request, content_types):
@@ -92,11 +92,8 @@ class Server(LogMixin, web.Application):
         handler = content_handlers[content_type]
         payload = handler(*args, **kwargs)
         charset = 'utf-8'
-
-        response = web.Response(body=payload.encode('utf-8'))
-        response.content_type = content_type
-        response.charset = charset
-        return response
+        return web.Response(body=payload.encode(charset),
+            content_type=content_type, charset=charset)
 
     @asyncio.coroutine
     def service_list_GET(self, request):
@@ -165,3 +162,89 @@ class Server(LogMixin, web.Application):
         if not slist:
             raise web.HTTPNotFound()
         return self.dispatch_request(request, content_handlers, slist)
+
+    @asyncio.coroutine
+    def publish_POST(self, request):
+        """Register a service in the service directory
+
+        :param request: incoming HTTP request
+        :type request: aiohttp.Request
+        :returns: A HTTP response
+        :rtype: aiohttp.web.Response
+        """
+        content_handlers = {
+            'application/json': services.service_from_json,
+            'application/xml': services.service_from_xml,
+        }
+        try:
+            handler = content_handlers[request.content_type]
+        except KeyError:
+            self.log.info('Unhandled Content-Type: %s', request.content_type)
+            raise web.HTTPUnsupportedMediaType(reason='Unhandled Content-Type: %s' % request.content_type)
+
+        try:
+            text = yield from request.text()
+            self.log.debug('Service text: %s', text)
+            service = handler(text)
+        except ValueError:
+            # bad input
+            raise web.HTTPBadRequest(reason='Invalid data, expected service')
+
+        if not service['name']:
+            # bad input
+            raise web.HTTPBadRequest(reason='Missing service name')
+        else:
+            try:
+                self._directory.service(name=service['name'])
+            except self._directory.DoesNotExist:
+                code = web.HTTPCreated.status_code
+            else:
+                code = web.HTTPOk.status_code
+
+            self._directory.publish(service=service)
+            payload = 'Publish OK'
+            return web.Response(body=payload.encode('utf-8'), status=code,
+                content_type='text/plain', charset='utf-8')
+
+    @asyncio.coroutine
+    def unpublish_POST(self, request):
+        """De-register a service in the service directory
+
+        :param request: incoming HTTP request
+        :type request: aiohttp.Request
+        :returns: A HTTP response
+        :rtype: aiohttp.web.Response
+        """
+        content_handlers = {
+            'application/json': services.service_from_json,
+            'application/xml': services.service_from_xml,
+        }
+        try:
+            handler = content_handlers[request.content_type]
+        except KeyError:
+            self.log.info('Unhandled Content-Type: %s', request.content_type)
+            raise web.HTTPUnsupportedMediaType(reason='Unhandled Content-Type: %s' % request.content_type)
+
+        try:
+            text = yield from request.text()
+            self.log.debug('Service text: %s', text)
+            service = handler(text)
+        except ValueError:
+            # bad input
+            raise web.HTTPBadRequest(reason='Invalid data, expected service')
+
+        name = service['name']
+        if not name:
+            # bad input
+            raise web.HTTPBadRequest(reason='Missing service name')
+
+        try:
+            self._directory.unpublish(name=name)
+        except self._directory.DoesNotExist:
+            self.log.info('Service %s is not published' % (name, ))
+            raise web.HTTPBadRequest(reason='Service %s is not published' % (name, ))
+        self.log.info('Unpublish %s OK', name)
+        payload = 'Unpublish OK'
+        code = web.HTTPOk.status_code
+        return web.Response(body=payload.encode('utf-8'), status=code,
+            content_type='text/plain', charset='utf-8')

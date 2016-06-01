@@ -162,7 +162,9 @@ class ServiceDirectory(Directory):
         :type name: string
         """
         self.log.debug('unpublish: %s' % (name, ))
-        service = self._db.get(self.Service, {'name': name})
+        service = self._db.filter(self.Service, {'name': name})
+        if len(service) == 0:
+            raise self.DoesNotExist()
         service.delete()
         self._db.commit()
         self._call_notify()

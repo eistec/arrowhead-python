@@ -112,14 +112,16 @@ def service_to_xml(service):
         for (k, v) in service['properties'].items())
     xml_str = (
         '<service>'
+        '<name>%s</name>'
+        '<type>%s</type>'
         '<domain>%s</domain>'
         '<host>%s</host>'
-        '<name>%s</name>'
-        '<port>%u</port>'
+        '<port>%s</port>'
         '<properties>%s</properties>'
-        '</service>') % (service['domain'],
+        '</service>') % (service['name'],
+                         service['type'],
+                         service['domain'],
                          service['host'],
-                         service['name'],
                          service['port'],
                          props)
     return xml_str
@@ -137,6 +139,8 @@ if HAVE_XML:
                     node.tag, res[node.tag], node.text)
             if node.tag in SERVICE_ATTRIBUTES:
                 res[node.tag] = node.text.strip()
+                if (node.tag == 'port'):
+                    res[node.tag] = int(res[node.tag])
                 # ignoring any XML attributes or child nodes
             elif node.tag == 'properties':
                 props = {}

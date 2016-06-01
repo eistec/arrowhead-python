@@ -22,26 +22,44 @@ EXAMPLE_SERVICES = {
             }
         },
         'as_json': '''
-        {
-            "name": "orchestration-store._orch-s-ws-https._tcp.srv.arces.unibo.it.",
-            "type": "_orch-s-ws-https._tcp",
-            "domain": "arces.unibo.it.",
-            "host": "bedework.arces.unibo.it.",
-            "port": 8181,
-            "properties": {
-                "property": [
-                    {
-                        "name": "version",
-                        "value": "1.0"
-                    },
-                    {
-                        "name": "path",
-                        "value": "/orchestration/store/"
-                    }
-                ]
-            }
-        }''',
-        'as_xml': ''''''
+            {
+                "name": "orchestration-store._orch-s-ws-https._tcp.srv.arces.unibo.it.",
+                "type": "_orch-s-ws-https._tcp",
+                "domain": "arces.unibo.it.",
+                "host": "bedework.arces.unibo.it.",
+                "port": 8181,
+                "properties": {
+                    "property": [
+                        {
+                            "name": "version",
+                            "value": "1.0"
+                        },
+                        {
+                            "name": "path",
+                            "value": "/orchestration/store/"
+                        }
+                    ]
+                }
+            }''',
+        'as_xml': '''
+            <service>
+                <domain>arces.unibo.it.</domain>
+                <host>bedework.arces.unibo.it.</host>
+                <name>orchestration-store._orch-s-ws-https._tcp.srv.arces.unibo.it.</name>
+                <port>8181</port>
+                <properties>
+                    <property>
+                        <name>version</name>
+                        <value>1.0</value>
+                    </property>
+                    <property>
+                        <name>path</name>
+                        <value>/orchestration/store/</value>
+                    </property>
+                </properties>
+                <type>_orch-s-ws-https._tcp</type>
+            </service>
+        '''
     },
     'SingleService2': {
         'service': {
@@ -56,27 +74,45 @@ EXAMPLE_SERVICES = {
             }
         },
         'as_json': '''
-        {
-            "name": "anotherprinterservice._printer-s-ws-https._tcp.srv.arces.unibo.it.",
-            "type": "_printer-s-ws-https._tcp",
-            "domain": "168.56.101.",
-            "host": "192.168.56.101.",
-            "port": 8055,
-            "properties": {
-                "property": [
-                    {
-                        "name": "version",
-                        "value": "1.0"
-                    },
-                    {
-                        "name": "path",
-                        "value": "/printer/something"
-                    }
-                ]
+            {
+                "name": "anotherprinterservice._printer-s-ws-https._tcp.srv.arces.unibo.it.",
+                "type": "_printer-s-ws-https._tcp",
+                "domain": "168.56.101.",
+                "host": "192.168.56.101.",
+                "port": 8055,
+                "properties": {
+                    "property": [
+                        {
+                            "name": "version",
+                            "value": "1.0"
+                        },
+                        {
+                            "name": "path",
+                            "value": "/printer/something"
+                        }
+                    ]
+                }
             }
-        }
         ''',
-        'as_xml': ''''''
+        'as_xml': '''
+            <service>
+                <domain>168.56.101.</domain>
+                <host>192.168.56.101.</host>
+                <name>anotherprinterservice._printer-s-ws-https._tcp.srv.arces.unibo.it.</name>
+                <port>8055</port>
+                <properties>
+                    <property>
+                        <name>version</name>
+                        <value>1.0</value>
+                    </property>
+                    <property>
+                        <name>path</name>
+                        <value>/printer/something</value>
+                    </property>
+                </properties>
+                <type>_printer-s-ws-https._tcp</type>
+            </service>
+        '''
     }
 }
 
@@ -167,4 +203,17 @@ def test_service_from_json(testcase):
     for name, value in expected_dict['properties'].items():
         assert name in s['properties']
         assert value == s['properties'][name]
+
+@pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
+def test_service_from_xml(testcase):
+    '''service_parse_json should create a Service instance from JSON text'''
+    # testcase is a tuple (testname, testdata)
+    xml_input = testcase[1]['as_xml']
+    expected_dict = testcase[1]['service']
+    s = services.service_from_xml(xml_input)
+    for key in expected_dict.keys() - ['properties']:
+        assert str(s[key]) == str(expected_dict[key])
+    for name, value in expected_dict['properties'].items():
+        assert name in s['properties']
+        assert str(value) == str(s['properties'][name])
 

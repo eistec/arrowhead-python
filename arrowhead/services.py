@@ -130,11 +130,11 @@ if HAVE_XML:
         res = service_dict()
         root = ET.fromstring(xmlstr)
         for node in root:
-            if node.tag in res:
+            if node.tag in res and res[node.tag]:
                 # disallow multiple occurrences of the same tag
                 raise ServiceError(
                     "Multiple occurrence of tag <%s>" %
-                    node.tag, node.tag, node.text)
+                    node.tag, res[node.tag], node.text)
             if node.tag in SERVICE_ATTRIBUTES:
                 res[node.tag] = node.text.strip()
                 # ignoring any XML attributes or child nodes

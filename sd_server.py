@@ -22,7 +22,7 @@ def main(argv=None):
                         help="CoAP port, use 0 to disable")
     parser.add_argument("--coap-bind", default='::',
                         help="CoAP server bind address")
-    parser.add_argument("--http-port", type=int, default=8080,
+    parser.add_argument("--http-port", type=int, default=8045,
                         help="HTTP port, use 0 to disable")
     parser.add_argument("--http-bind", default='::',
                         help="HTTP server bind address")

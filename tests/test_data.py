@@ -356,8 +356,4 @@ BROKEN_XML = {
                 <type>_orch-s-ws-https._tcp</type>
             </service>
         ''',
-
-
-
-
 }

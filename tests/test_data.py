@@ -1,4 +1,4 @@
-"""Test input data"""
+"""Input data for tests"""
 
 EXAMPLE_SERVICES = {
     'SingleService1': {

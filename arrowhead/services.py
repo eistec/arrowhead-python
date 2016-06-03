@@ -28,17 +28,31 @@ SERVICE_ATTRIBUTES = ("name", "type", "host", "port", "domain")
 __all__ = [
     'ServiceError',
     'service_dict',
-    'service_from_json',
-    'service_from_json_dict',
-    'service_from_xml',
-    'service_to_corelf',
-    'service_to_json',
-    'service_to_json_dict',
     'service_to_xml',
-    'servicelist_to_corelf',
-    'servicelist_to_json',
-    'servicelist_to_xml']
+    'servicelist_to_xml',
+    'service_to_corelf',
+    ]
 
+if HAVE_JSON:
+    __all__.extend([
+        'service_from_json',
+        'service_from_json_dict',
+        'service_to_json',
+        'service_to_json_dict',
+        'servicelist_to_json',
+        'typelist_to_json',
+    ])
+
+if HAVE_XML:
+    __all__.extend([
+        'service_from_xml',
+    ])
+
+if HAVE_LINK_HEADER:
+    __all__.extend([
+        'servicelist_to_corelf',
+        'typelist_to_corelf',
+    ])
 
 class ServiceError(Exception):
     """Exception raised by run time errors in this module"""

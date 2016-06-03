@@ -27,6 +27,7 @@ EXPECTED_ROOT_RESOURCES = (
     )
 
 def test_coap_server():
+    """Test initialization of the CoAP Server object"""
     db_dir = tempfile.TemporaryDirectory()
     mydir = directory.ServiceDirectory(database=db_dir.name)
     coap_bind = '127.0.0.1'

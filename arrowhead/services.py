@@ -177,7 +177,7 @@ if HAVE_XML:
             if values['name'] in props:
                 raise ServiceError(
                     "Multiple occurrence of property '{}': '{}', '{}'".format(
-                    values['name'], props[values['name']], values['value']))
+                        values['name'], props[values['name']], values['value']))
             props[values['name']] = values['value'].strip()
         return props
 
@@ -204,7 +204,7 @@ if HAVE_XML:
                 if list(node):
                     raise ServiceError(
                         "Nested service tag <{0}>{1}</{0}>".format(
-                        node.tag, repr(list(node))))
+                            node.tag, repr(list(node))))
             else:
                 raise ServiceError(
                     "Unknown service tag <%s>" %

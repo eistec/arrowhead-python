@@ -120,3 +120,4 @@ def test_service_from_xml_neg(testcase):
     xml_input = testcase[1]
     with pytest.raises(services.ServiceError):
         service = services.service_from_xml(xml_input)
+        assert isinstance(service, dict)

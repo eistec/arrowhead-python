@@ -1,4 +1,6 @@
 """Test the arrowhead.servicedirectory.directory module"""
+#pylint: disable=no-member
+# pylint doesn't understand mock objects
 
 from unittest import mock
 import tempfile
@@ -11,7 +13,7 @@ from arrowhead import services
 
 from ..test_data import EXAMPLE_SERVICES
 
-def test_servicedirectory_ctor_nowrite():
+def test_servicedir_ctor_nowrite():
     """Verify that the constructor does not write to the database"""
     mock_database = mock.create_autospec(blitzdb.FileBackend)
     mydir = directory.ServiceDirectory(database=mock_database)
@@ -19,7 +21,7 @@ def test_servicedirectory_ctor_nowrite():
     assert mock_database.commit.call_count == 0
     assert isinstance(mydir, directory.Directory)
 
-def test_servicedirectory_ctor_dir():
+def test_servicedir_ctor_dir():
     """Verify that the constructor creates a database in the given directory"""
     db_dir = tempfile.TemporaryDirectory()
     with mock.patch('arrowhead.servicedirectory.directory.blitzdb.FileBackend'):
@@ -27,7 +29,7 @@ def test_servicedirectory_ctor_dir():
         directory.blitzdb.FileBackend.assert_called_once_with(db_dir.name, mock.ANY)
         assert isinstance(mydir, directory.Directory)
 
-def test_servicedirectory_ctor_nodir():
+def test_servicedir_ctor_nodir():
     """Verify that the constructor creates a temporary database if not given a directory"""
     with mock.patch('arrowhead.servicedirectory.directory.blitzdb.FileBackend'):
         mydir = directory.ServiceDirectory(database=None)
@@ -36,7 +38,7 @@ def test_servicedirectory_ctor_nodir():
         assert arg.startswith(tempfile.gettempdir())
         assert isinstance(mydir, directory.Directory)
 
-def test_servicedirectory_publish():
+def test_servicedir_publish():
     """Test ServiceDirectory.publish"""
     mock_database = mock.create_autospec(blitzdb.FileBackend)
     mydir = directory.ServiceDirectory(database=mock_database)
@@ -51,7 +53,7 @@ def test_servicedirectory_publish():
         for key in service.keys():
             assert getattr(service_entry, key) == getattr(expected_service_entry, key)
 
-def test_servicedirectory_unpublish():
+def test_servicedir_unpublish():
     """Test ServiceDirectory.unpublish"""
     db_dir = tempfile.TemporaryDirectory()
     mydir = directory.ServiceDirectory(database=db_dir.name)
@@ -66,7 +68,7 @@ def test_servicedirectory_unpublish():
         with pytest.raises(mydir.DoesNotExist):
             mydir.unpublish(name=service['name'])
 
-def test_servicedirectory_service():
+def test_servicedir_service():
     """Test ServiceDirectory.service"""
     db_dir = tempfile.TemporaryDirectory()
     mydir = directory.ServiceDirectory(database=db_dir.name)
@@ -85,7 +87,7 @@ def test_servicedirectory_service():
         with pytest.raises(mydir.DoesNotExist):
             mydir.service(name=service_dict['service']['name'])
 
-def test_servicedirectory_service_list():
+def test_servicedir_service_list():
     """Test ServiceDirectory.service_list, ServiceDirectory.types"""
     db_dir = tempfile.TemporaryDirectory()
     mydir = directory.ServiceDirectory(database=db_dir.name)
@@ -109,7 +111,7 @@ def test_servicedirectory_service_list():
         assert len(output) == count
     assert len(mydir.types()) == 0
 
-def test_servicedirectory_callbacks():
+def test_servicedir_callbacks():
     """Test ServiceDirectory.add_notify_callback, ServiceDirectory.del_notify_callback"""
     callback = mock.MagicMock()
     db_dir = tempfile.TemporaryDirectory()

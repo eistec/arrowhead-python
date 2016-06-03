@@ -94,7 +94,6 @@ class ServiceDirectory(Directory):
 
     def prune_old_services(self):
         """Delete all service entries that have timed out"""
-        # TODO: Investigate if there are any race issues
         now = unix_now()
         services = self._db.filter(self.Service, {'deadline': {'$lt': now}})
         count = len(services)
@@ -184,7 +183,7 @@ class ServiceDirectory(Directory):
         self.log.debug('find %s', name)
         try:
             service = self._db.get(self.Service, {'name': name})
-        except self.Service.DoesNotExist:
+        except self.Service.DoesNotExist: #pylint: disable=no-member
             raise self.DoesNotExist('Not found: {}'.format(name))
         return dict(service.attributes.copy())
 

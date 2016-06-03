@@ -1,4 +1,5 @@
 """This module provides a Python API for interacting with Arrowhead services"""
+#pylint: disable=too-few-public-methods
 
 import logging
 from logging import NullHandler

@@ -253,3 +253,7 @@ class Server(LogMixin, web.Application):
         return web.Response(
             body=payload.encode('utf-8'), status=code,
             content_type='text/plain', charset='utf-8')
+
+    def copy(self):
+        """Disable copying"""
+        raise NotImplementedError

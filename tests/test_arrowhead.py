@@ -1,6 +1,6 @@
 """Test top level arrowhead module"""
-import arrowhead
 import logging
+import arrowhead
 
 def test_log_mixin():
     """Test that the LogMixin provides a log object"""

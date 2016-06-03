@@ -7,12 +7,10 @@ from unittest import mock
 import tempfile
 import json
 
-import pytest
-
-import aiocoap
 import link_header
 from aiocoap.numbers.codes import Code
 
+import aiocoap
 from arrowhead.servicedirectory import directory
 from arrowhead.servicedirectory import coap
 from arrowhead import services
@@ -43,7 +41,9 @@ def test_coap_server():
     with mock.patch('arrowhead.servicedirectory.coap.aiocoap.Context'):
         coap_server = coap.Server(directory=mydir, bind=(coap_bind, coap_port))
         assert arrowhead.servicedirectory.coap.aiocoap.Context.create_server_context.call_count == 1
-        arrowhead.servicedirectory.coap.aiocoap.Context.create_server_context.assert_called_once_with(mock.ANY, bind=(coap_bind, coap_port))
+        arrowhead.servicedirectory.coap.\
+            aiocoap.Context.create_server_context.\
+            assert_called_once_with(mock.ANY, bind=(coap_bind, coap_port))
         req = aiocoap.Message(code=Code.GET)
         req.opt.uri_path = URI_PATH_WKC
         req.opt.accept = aiocoap.numbers.media_types_rev['application/link-format']

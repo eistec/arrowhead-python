@@ -16,7 +16,7 @@ from aiocoap.numbers import media_types_rev
 from aiocoap.numbers.codes import Code
 import aiocoap
 
-from ..log import LogMixin
+from .. import LogMixin
 
 from .. import services
 

@@ -3,7 +3,7 @@ import fnmatch
 import asyncio
 from aiohttp import web
 
-from ..log import LogMixin
+from .. import LogMixin
 
 from .. import services
 

@@ -48,7 +48,7 @@ def test_servicedir_publish():
         expected_service_entry = mydir.Service(service)
         mydir.publish(service=service)
         assert mock_database.save.call_count == 1
-        assert mock_database.commit.call_count > 1
+        assert mock_database.commit.call_count >= 1
         service_entry = mock_database.save.call_args[0][0]
         for key in service.keys():
             assert getattr(service_entry, key) == getattr(expected_service_entry, key)

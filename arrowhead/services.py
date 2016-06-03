@@ -156,22 +156,29 @@ if HAVE_XML:
                 continue
             values = {'name': None, 'value': None}
             for child_prop in child_node:
-                if child_prop.tag in values:
-                    if values[child_prop.tag] is not None:
-                        raise ServiceError(
-                            "Multiple occurrence of property tag <%s>: '%s', '%s'" %
-                            child_prop.tag, values[child_prop.tag], child_prop.text)
-                    values[child_prop.tag] = child_prop.text.strip()
-                # ignoring any unknown tags
+                if child_prop.tag not in values:
+                    raise ServiceError(
+                        "Unknown property tag <%s>" %
+                        child_prop.tag)
+                if values[child_prop.tag] is not None:
+                    raise ServiceError(
+                        "Multiple occurrence of property tag <%s>: '%s', '%s'" %
+                        child_prop.tag, values[child_prop.tag], child_prop.text)
+                if child_prop.text is None:
+                    raise ServiceError(
+                        "Empty property tag <%s>" %
+                        child_prop.tag)
+                values[child_prop.tag] = child_prop.text.strip()
+
             for key, value in values.items():
                 if value is None:
                     raise ServiceError(
                         "Missing property %s" % (key, ))
             if values['name'] in props:
                 raise ServiceError(
-                    "Multiple occurrence of property '%s': '%s', '%s'" %
-                    values['name'], props[values['name']], values['value'])
-            props[values['name']] = values['value']
+                    "Multiple occurrence of property '{}': '{}', '{}'".format(
+                    values['name'], props[values['name']], values['value']))
+            props[values['name']] = values['value'].strip()
         return props
 
     def service_from_xml(xmlstr):
@@ -180,7 +187,7 @@ if HAVE_XML:
         try:
             root = ET.fromstring(xmlstr)
         except ET.ParseError:
-            raise ValueError('Invalid XML service')
+            raise ServiceError('Invalid XML service')
         for node in root:
             if node.tag in res and res[node.tag]:
                 # disallow multiple occurrences of the same tag
@@ -194,8 +201,14 @@ if HAVE_XML:
                 res[node.tag] = node.text.strip()
                 if node.tag == 'port':
                     res[node.tag] = int(res[node.tag])
-                # ignoring any XML attributes or child nodes
-            # ignoring any unknown tags
+                if list(node):
+                    raise ServiceError(
+                        "Nested service tag <{0}>{1}</{0}>".format(
+                        node.tag, repr(list(node))))
+            else:
+                raise ServiceError(
+                    "Unknown service tag <%s>" %
+                    node.tag)
         return res
 
 

@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 from arrowhead import services
-from .test_data import EXAMPLE_SERVICES
+from .test_data import EXAMPLE_SERVICES, BROKEN_XML
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_dict(testcase):
@@ -20,7 +20,7 @@ def test_service_dict(testcase):
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_to_json(testcase):
-    '''Loading the output from as_json should give the same dict as the input data'''
+    '''Loading the output from service_to_json should give the same dict as the input data'''
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
     expected_dict = indata_dict
@@ -39,7 +39,7 @@ def test_service_to_json(testcase):
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_to_xml(testcase):
-    '''as_xml should give an xml representation of the service'''
+    '''service_to_xml should give an xml representation of the service'''
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
     expected_dict = indata_dict
@@ -90,7 +90,7 @@ def test_service_to_xml(testcase):
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_from_json(testcase):
-    '''service_parse_json should create a Service instance from JSON text'''
+    '''service_from_json should create a service dict from JSON text'''
     # testcase is a tuple (testname, testdata)
     json_input = testcase[1]['as_json']
     expected_dict = testcase[1]['service']
@@ -103,7 +103,7 @@ def test_service_from_json(testcase):
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_from_xml(testcase):
-    '''service_parse_json should create a Service instance from JSON text'''
+    '''service_from_xml should create a service dict from XML text'''
     # testcase is a tuple (testname, testdata)
     xml_input = testcase[1]['as_xml']
     expected_dict = testcase[1]['service']
@@ -113,3 +113,10 @@ def test_service_from_xml(testcase):
     for name, value in expected_dict['properties'].items():
         assert name in service['properties']
         assert value == service['properties'][name]
+
+@pytest.mark.parametrize('testcase', BROKEN_XML.items(), ids=(lambda x: str(x[0])))
+def test_service_from_xml_neg(testcase):
+    '''service_from_xml should raise exceptions on broken XML'''
+    xml_input = testcase[1]
+    with pytest.raises(services.ServiceError):
+        service = services.service_from_xml(xml_input)

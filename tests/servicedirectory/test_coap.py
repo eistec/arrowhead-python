@@ -185,9 +185,8 @@ def test_coap_service(test_format, coap_server_filled): #pylint: disable=redefin
     req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))
     req.opt.accept = content_format
     req.opt.uri_path = URI_PATH_SERVICE + (name, )
-    res = yield from coap_server.site.render(req)
-    assert isinstance(res, aiocoap.Message)
-    assert res.code in (Code.NOT_FOUND, )
+    with pytest.raises(coap.NotFoundError):
+        res = yield from coap_server.site.render(req)
 
 @pytest.mark.parametrize("test_format", TEST_FORMATS)
 @pytest.mark.asyncio
@@ -296,3 +295,24 @@ def test_coap_publish_neg(test_format, coap_server_setup): #pylint: disable=rede
         assert res.code in (Code.BAD_REQUEST, )
         assert len(dir_spy.method_calls) == 0
 
+@pytest.mark.asyncio
+def test_coap_service_default(coap_server_filled): #pylint: disable=redefined-outer-name
+    """Test that /service gives a proper response without Accept headers"""
+    test_format = 'json'
+    coap_server = coap_server_filled.coap_server
+    mydir = coap_server_filled.directory_spy.real
+    numitems = len(mydir.service_list())
+    #content_format = aiocoap.numbers.media_types_rev['application/' + test_format]
+    req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))
+    #req.opt.accept = content_format
+    req.opt.uri_path = URI_PATH_SERVICE
+    res = yield from coap_server.site.render(req)
+    assert isinstance(res, aiocoap.Message)
+    assert res.code in (Code.CONTENT, )
+    slist = service_list_from_payload(res.payload.decode('utf-8'), test_format)
+    sdict = {srv['name']: srv for srv in slist}
+    assert len(slist) == numitems
+    for service in mydir.service_list():
+        assert service['name'] in sdict
+        for key in services.service_dict().keys():
+            assert sdict[service['name']][key] == service[key]

@@ -29,6 +29,51 @@ __all__ = [
 
 URI_PATH_SEPARATOR = '/'
 
+class RequestDispatcher(object):
+    """Helper functions for dispatching requests based on their Accept or
+    Content-format header options"""
+
+    @staticmethod
+    def dispatch_input(request, handlers, *args, **kwargs):
+        """Dispatch handling of the request payload to a handler based on the
+        given Content-format option"""
+        try:
+            input_handler = handlers[request.opt.content_format]
+        except KeyError:
+            raise UnsupportedMediaTypeError()
+        else:
+            return input_handler(*args, **kwargs)
+
+    @staticmethod
+    def dispatch_output(request, handlers, *args, **kwargs):
+        """Dispatch handling of the request payload to a handler based on the
+        given Accept option"""
+        try:
+            output_handler = handlers[request.opt.accept]
+        except KeyError:
+            raise NotAcceptableError()
+        else:
+            return output_handler(*args, **kwargs)
+
+class NotAcceptableError(aiocoap.error.RenderableError):
+    """Not acceptable, there is no handler registered for the given Accept type"""
+    code = Code.NOT_ACCEPTABLE
+    message = "NotAcceptable"
+
+class UnsupportedMediaTypeError(aiocoap.error.RenderableError):
+    """Unsupported media type, there is no handler registered for the given Content-format"""
+    code = Code.UNSUPPORTED_MEDIA_TYPE
+    message = "UnsupportedMediaType"
+
+class NotFoundError(aiocoap.error.RenderableError):
+    """Not found"""
+    code = Code.NOT_FOUND
+    message = "NotFound"
+
+class BadRequestError(aiocoap.error.RenderableError):
+    """Generic bad request message"""
+    code = Code.BAD_REQUEST
+    message = "BadRequest"
 
 class ParentSite(LogMixin, resource.Site):
     """CoAP Site resource which sends the request to the closest parent if the
@@ -36,6 +81,7 @@ class ParentSite(LogMixin, resource.Site):
 
     @asyncio.coroutine
     def render(self, request):
+        """Dispatch rendering to the best matching resource"""
         path = tuple(request.opt.uri_path)
         for i in range(len(path), 0, -1):
             key = request.opt.uri_path[:i]
@@ -54,12 +100,29 @@ class ParentSite(LogMixin, resource.Site):
         raise aiocoap.error.NoResource()
 
 
-class ServiceResource(LogMixin, resource.ObservableResource):
+class ServiceResource(RequestDispatcher, LogMixin, resource.ObservableResource):
     """/service resource"""
     service_url = '/service'
+    service_handlers = {
+        None: services.service_to_json,
+        media_types_rev['application/json']: services.service_to_json,
+        media_types_rev['application/link-format']: services.service_to_corelf,
+        media_types_rev['application/xml']: services.service_to_xml,
+    }
+    slist_handlers = {
+        None: services.servicelist_to_json,
+        media_types_rev['application/json']: services.servicelist_to_json,
+        media_types_rev['application/link-format']: services.servicelist_to_corelf,
+        media_types_rev['application/xml']: services.servicelist_to_xml,
+    }
 
-    def __init__(self, directory):
-        super().__init__()
+    def __init__(self, directory, *args, **kwargs):
+        """Constructor
+
+        :param directory: Service directory backend
+        :type directory: arrowhead.servicedirectory.directory.ServiceDirectory
+        """
+        super().__init__(*args, **kwargs)
         self._directory = directory
         self._directory.add_notify_callback(self.notify)
         self.notify()
@@ -69,51 +132,20 @@ class ServiceResource(LogMixin, resource.ObservableResource):
         self.log.debug('Notifying subscribers')
         self.updated_state()
 
-    @staticmethod
-    def _render_service(request, service):
-        code = Code.CONTENT
-        if request.opt.accept is None or request.opt.accept == media_types_rev[
-                'application/json']:
-            # JSON by default
-            payload = services.service_to_json(service)
-            content_format = media_types_rev['application/json']
-        elif request.opt.accept == media_types_rev['application/link-format']:
-            payload = services.service_to_corelf(service)
-            content_format = media_types_rev['application/link-format']
-        elif request.opt.accept == media_types_rev['application/xml']:
-            payload = services.service_to_xml(service)
-            content_format = media_types_rev['application/xml']
-        else:
-            # Unknown Accept format
-            payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-            content_format = media_types_rev['text/plain']
-            code = Code.NOT_ACCEPTABLE
-        msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
-        msg.opt.content_format = content_format
+    def _render_service(self, request, service):
+        payload = self.dispatch_output(request, self.service_handlers, service)
+        msg = aiocoap.Message(code=Code.CONTENT, payload=payload.encode('utf-8'))
+        msg.opt.content_format = request.opt.accept
+        if msg.opt.content_format is None:
+            msg.opt.content_format = media_types_rev['application/json']
         return msg
 
     def _render_servicelist(self, request, slist):
-        code = Code.CONTENT
-        if request.opt.accept is None or request.opt.accept == media_types_rev[
-                'application/json']:
-            # JSON by default
-            payload = services.servicelist_to_json(slist)
-            content_format = media_types_rev['application/json']
-        elif request.opt.accept == media_types_rev['application/link-format']:
-            uri_base_str = '/' + \
-                '/'.join(request.prepath[:-1]) + self.service_url
-            payload = services.servicelist_to_corelf(slist, uri_base_str)
-            content_format = media_types_rev['application/link-format']
-        elif request.opt.accept == media_types_rev['application/xml']:
-            payload = services.servicelist_to_xml(slist)
-            content_format = media_types_rev['application/xml']
-        else:
-            # Unknown Accept format
-            payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-            content_format = media_types_rev['text/plain']
-            code = Code.NOT_ACCEPTABLE
-        msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
-        msg.opt.content_format = content_format
+        payload = self.dispatch_output(request, self.slist_handlers, slist)
+        msg = aiocoap.Message(code=Code.CONTENT, payload=payload.encode('utf-8'))
+        msg.opt.content_format = request.opt.accept
+        if msg.opt.content_format is None:
+            msg.opt.content_format = media_types_rev['application/json']
         return msg
 
     @asyncio.coroutine
@@ -130,7 +162,7 @@ class ServiceResource(LogMixin, resource.ObservableResource):
                 service = self._directory.service(name=name)
             except self._directory.DoesNotExist:
                 # Could not find a service by that name, send response code
-                return aiocoap.Message(code=Code.NOT_FOUND, payload='')
+                raise NotFoundError()
             return self._render_service(request, service)
         else:
             slist = self._directory.service_list()
@@ -140,8 +172,8 @@ class ServiceResource(LogMixin, resource.ObservableResource):
 class PublishResource(LogMixin, resource.Resource):
     """/publish resource"""
 
-    def __init__(self, directory):
-        super().__init__()
+    def __init__(self, directory, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._directory = directory
 
     @asyncio.coroutine
@@ -181,10 +213,7 @@ class PublishResource(LogMixin, resource.Resource):
                     self._directory.publish(service=service)
                     payload = 'POST OK'
         else:
-            code = Code.UNSUPPORTED_MEDIA_TYPE
-            payload = (
-                'Unknown Content-Format option: %s' %
-                (request.opt.content_format, ))
+            raise UnsupportedMediaTypeError()
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = media_types_rev['text/plain']
         return msg
@@ -193,8 +222,8 @@ class PublishResource(LogMixin, resource.Resource):
 class UnpublishResource(LogMixin, resource.Resource):
     """/unpublish resource"""
 
-    def __init__(self, directory):
-        super().__init__()
+    def __init__(self, directory, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._directory = directory
 
     def _unpublish_json(self, request):
@@ -232,32 +261,9 @@ class UnpublishResource(LogMixin, resource.Resource):
         try:
             handler = content_handlers[request.opt.content_format]
         except KeyError:
-            code = Code.UNSUPPORTED_MEDIA_TYPE
-            payload = (
-                'Unknown Content-Format option: %s' %
-                (request.opt.content_format, ))
-            msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
-            msg.opt.content_format = media_types_rev['text/plain']
-            return msg
+            raise UnsupportedMediaTypeError()
         else:
             return handler(request)
-
-    @asyncio.coroutine
-    @staticmethod
-    def render_get(request): # pylint: disable=unused-argument
-        """GET handler, show usage help
-
-        :param request: The inbound CoAP request
-        :type request: aiocoap.Message
-        :return: A CoAP response
-        :rtype: aiocoap.Message
-        """
-        payload = 'Unpublish a service, input payload JSON: {"name":"servicename123"}'
-        code = Code.METHOD_NOT_ALLOWED
-        msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
-        msg.opt.content_format = media_types_rev['text/plain']
-        return msg
-
 
 class TypeResource(ServiceResource):
     """/type resource"""
@@ -276,9 +282,7 @@ class TypeResource(ServiceResource):
             content_format = media_types_rev['application/link-format']
         else:
             # Unknown Accept format
-            payload = ("Unknown accept option: %u" % (request.opt.accept, ))
-            content_format = media_types_rev['text/plain']
-            code = Code.NOT_ACCEPTABLE
+            raise NotAcceptableError()
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
         msg.opt.content_format = content_format
         return msg
@@ -297,7 +301,7 @@ class TypeResource(ServiceResource):
             slist = self._directory.service_list(type=name)
             if not slist:
                 # Could not find a service by that name, send response code
-                return aiocoap.Message(code=Code.NOT_FOUND, payload='')
+                raise NotFoundError()
             return self._render_servicelist(request, slist)
         else:
             tlist = self._directory.types()

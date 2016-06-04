@@ -11,6 +11,13 @@ except ImportError:
 else:
     HAVE_JSON = True
 
+try:
+    import xml.etree.ElementTree as ET
+except ImportError:
+    HAVE_XML = False
+else:
+    HAVE_XML = True
+
 import aiocoap.resource as resource
 from aiocoap.numbers import media_types_rev
 from aiocoap.numbers.codes import Code
@@ -111,11 +118,6 @@ class ServiceResource(RequestDispatcher, LogMixin, resource.ObservableResource):
         media_types_rev['application/link-format']: services.service_to_corelf,
         media_types_rev['application/xml']: services.service_to_xml,
     }
-    slist_handlers = {
-        media_types_rev['application/json']: services.servicelist_to_json,
-        media_types_rev['application/link-format']: services.servicelist_to_corelf,
-        media_types_rev['application/xml']: services.servicelist_to_xml,
-    }
 
     def __init__(self, directory, *args, **kwargs):
         """Constructor
@@ -124,9 +126,21 @@ class ServiceResource(RequestDispatcher, LogMixin, resource.ObservableResource):
         :type directory: arrowhead.servicedirectory.directory.ServiceDirectory
         """
         super().__init__(*args, **kwargs)
+        self.slist_handlers = {
+            media_types_rev['application/json']: \
+                lambda slist, req: services.servicelist_to_json(slist),
+            media_types_rev['application/xml']: \
+                lambda slist, req: services.servicelist_to_xml(slist),
+            media_types_rev['application/link-format']: self._slist_to_corelf,
+        }
         self._directory = directory
         self._directory.add_notify_callback(self.notify)
         self.notify()
+
+    def _slist_to_corelf(self, slist, request):
+        """Convert a service list to CoRE Link-format links to other resources"""
+        uri_base = '/' + '/'.join(request.prepath[:-1]) + self.service_url
+        return services.servicelist_to_corelf(slist, uri_base)
 
     def notify(self):
         """Send notifications to all registered subscribers"""
@@ -140,7 +154,7 @@ class ServiceResource(RequestDispatcher, LogMixin, resource.ObservableResource):
         return msg
 
     def _render_servicelist(self, request, slist):
-        payload = self.dispatch_output(request, self.slist_handlers, slist)
+        payload = self.dispatch_output(request, self.slist_handlers, slist, request)
         msg = aiocoap.Message(code=Code.CONTENT, payload=payload.encode('utf-8'))
         msg.opt.content_format = request.opt.accept
         if msg.opt.content_format is None:
@@ -216,24 +230,14 @@ class PublishResource(RequestDispatcher, LogMixin, resource.Resource):
 class UnpublishResource(RequestDispatcher, LogMixin, resource.Resource):
     """/unpublish resource"""
 
+    name_input_handlers = {
+        media_types_rev['application/json']: services.service_from_json,
+        media_types_rev['application/xml']: services.service_from_xml,
+    }
+
     def __init__(self, directory, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.name_input_handlers = {
-            media_types_rev['application/json']: self._name_json,
-            #media_types_rev['application/xml']: self._name_xml,
-        }
         self._directory = directory
-
-    def _name_json(self, payload):
-        try:
-            data = json.loads(payload.decode('utf-8'))
-        except ValueError:
-            # bad input
-            raise BadRequestError()
-        try:
-            return data['name']
-        except KeyError:
-            raise BadRequestError()
 
     @asyncio.coroutine
     def render_post(self, request):
@@ -247,8 +251,13 @@ class UnpublishResource(RequestDispatcher, LogMixin, resource.Resource):
         :return: A CoAP response
         :rtype: aiocoap.Message
         """
-        name = self.dispatch_input(request, self.name_input_handlers, request.payload)
-        self._directory.unpublish(name=name)
+        try:
+            service = self.dispatch_input(request, self.name_input_handlers, request.payload)
+        except Exception as exc:
+            # any error decoding the payload
+            print(repr(exc))
+            raise UnsupportedMediaTypeError()
+        self._directory.unpublish(name=service['name'])
         payload = 'POST OK'
         code = Code.DELETED
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))
@@ -259,14 +268,29 @@ class TypeResource(ServiceResource):
     """/type resource"""
     type_url = '/type'
     tlist_handlers = {
-        None: services.typelist_to_json,
         media_types_rev['application/json']: services.typelist_to_json,
         media_types_rev['application/link-format']: services.typelist_to_corelf,
         #media_types_rev['application/xml']: services.typelist_to_xml,
     }
 
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        super().__init__(*args, **kwargs)
+        self.tlist_handlers = {
+            media_types_rev['application/json']: \
+                lambda tlist, req: services.typelist_to_json(tlist),
+            #media_types_rev['application/xml']: \
+            #    lambda tlist, req: services.typelist_to_xml(slist),
+            media_types_rev['application/link-format']: self._tlist_to_corelf,
+        }
+
+    def _tlist_to_corelf(self, tlist, request):
+        """Convert a type list to CoRE Link-format links to other resources"""
+        uri_base = '/' + '/'.join(request.prepath[:-1]) + self.service_url
+        return services.typelist_to_corelf(tlist, uri_base)
+
     def _render_typelist(self, request, tlist):
-        payload = self.dispatch_output(request, self.tlist_handlers, tlist)
+        payload = self.dispatch_output(request, self.tlist_handlers, tlist, request)
         msg = aiocoap.Message(code=Code.CONTENT, payload=payload.encode('utf-8'))
         msg.opt.content_format = request.opt.accept
         if msg.opt.content_format is None:

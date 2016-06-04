@@ -83,15 +83,19 @@ if HAVE_JSON:
                 continue
         return service_dict(properties=props, **attrs)
 
-    def service_from_json(jsonstr):
+    def service_from_json(payload):
         """Create a service dict from a JSON string representation of the service
 
         The JSON string can be obtained from :meth:`arrowhead.services.service_to_json`
 
-        :param jsonstr: JSON string representation of a service
-        :type jsonstr: string
+        :param payload: JSON string representation of a service
+        :type payload: string or bytes
         """
         try:
+            if not isinstance(payload, str):
+                jsonstr = payload.decode('utf-8')
+            else:
+                jsonstr = payload
             return service_from_json_dict(json.loads(jsonstr))
         except ValueError as exc:
             raise ServiceError('ValueError while parsing JSON service: {}'.format(str(exc)))
@@ -191,6 +195,8 @@ if HAVE_XML:
             root = ET.fromstring(xmlstr)
         except ET.ParseError:
             raise ServiceError('Invalid XML service')
+        if root.tag != 'service':
+            raise ServiceError('Missing <service> tag')
         for node in root:
             if node.tag in res and res[node.tag]:
                 # disallow multiple occurrences of the same tag

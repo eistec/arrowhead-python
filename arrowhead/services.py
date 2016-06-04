@@ -54,7 +54,7 @@ if HAVE_LINK_HEADER:
         'typelist_to_corelf',
     ])
 
-class ServiceError(Exception):
+class ServiceError(RuntimeError):
     """Exception raised by run time errors in this module"""
 
 
@@ -91,7 +91,10 @@ if HAVE_JSON:
         :param jsonstr: JSON string representation of a service
         :type jsonstr: string
         """
-        return service_from_json_dict(json.loads(jsonstr))
+        try:
+            return service_from_json_dict(json.loads(jsonstr))
+        except ValueError as exc:
+            raise ServiceError('ValueError while parsing JSON service: {}'.format(str(exc)))
 
     def service_to_json_dict(service):
         """Convert a service dict to a JSON representation dict"""

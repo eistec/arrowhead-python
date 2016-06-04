@@ -247,17 +247,16 @@ def test_coap_publish_bad_type(coap_server_setup): #pylint: disable=redefined-ou
     # missing Content-format option
     req = aiocoap.Message(code=Code.POST, payload=payload)
     req.opt.uri_path = URI_PATH_PUBLISH
-    res = yield from coap_server.site.render(req)
-    assert isinstance(res, aiocoap.Message)
-    assert res.code in (Code.UNSUPPORTED_MEDIA_TYPE, )
+    with pytest.raises(coap.UnsupportedMediaTypeError):
+        yield from coap_server.site.render(req)
+    assert len(dir_spy.method_calls) == 0
 
     # wrong Content-format option
     req = aiocoap.Message(code=Code.POST, payload=payload)
     req.opt.uri_path = URI_PATH_PUBLISH
     req.opt.content_format = 30
-    res = yield from coap_server.site.render(req)
-    assert isinstance(res, aiocoap.Message)
-    assert res.code in (Code.UNSUPPORTED_MEDIA_TYPE, )
+    with pytest.raises(coap.UnsupportedMediaTypeError):
+        yield from coap_server.site.render(req)
     assert len(dir_spy.method_calls) == 0
 
 @pytest.mark.asyncio
@@ -272,9 +271,8 @@ def test_coap_publish_wrong_format(coap_server_setup): #pylint: disable=redefine
     req = aiocoap.Message(code=Code.POST, payload=payload)
     req.opt.uri_path = URI_PATH_PUBLISH
     req.opt.content_format = aiocoap.numbers.media_types_rev['application/json']
-    res = yield from coap_server.site.render(req)
-    assert isinstance(res, aiocoap.Message)
-    assert res.code in (Code.BAD_REQUEST, )
+    with pytest.raises(coap.BadRequestError):
+        yield from coap_server.site.render(req)
     assert len(dir_spy.method_calls) == 0
 
 @pytest.mark.parametrize("test_format", TEST_FORMATS)
@@ -290,9 +288,8 @@ def test_coap_publish_neg(test_format, coap_server_setup): #pylint: disable=rede
         req = aiocoap.Message(code=Code.POST, payload=payload)
         req.opt.uri_path = URI_PATH_PUBLISH
         req.opt.content_format = aiocoap.numbers.media_types_rev['application/' + test_format]
-        res = yield from coap_server.site.render(req)
-        assert isinstance(res, aiocoap.Message)
-        assert res.code in (Code.BAD_REQUEST, )
+        with pytest.raises(coap.BadRequestError):
+            yield from coap_server.site.render(req)
         assert len(dir_spy.method_calls) == 0
 
 @pytest.mark.asyncio

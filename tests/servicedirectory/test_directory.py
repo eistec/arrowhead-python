@@ -13,6 +13,13 @@ from arrowhead import services
 
 from ..test_data import EXAMPLE_SERVICES
 
+@pytest.yield_fixture
+def temp_dir():
+    """Create a service directory object with a temporary storage"""
+    with tempfile.TemporaryDirectory() as db_dir:
+        mydir = directory.ServiceDirectory(database=db_dir)
+        yield mydir
+
 def test_servicedir_ctor_nowrite():
     """Verify that the constructor does not write to the database"""
     mock_database = mock.create_autospec(blitzdb.FileBackend)
@@ -53,81 +60,73 @@ def test_servicedir_publish():
         for key in service.keys():
             assert getattr(service_entry, key) == getattr(expected_service_entry, key)
 
-def test_servicedir_unpublish():
+def test_servicedir_unpublish(temp_dir):
     """Test ServiceDirectory.unpublish"""
-    db_dir = tempfile.TemporaryDirectory()
-    mydir = directory.ServiceDirectory(database=db_dir.name)
     for service_dict in EXAMPLE_SERVICES.values():
         service = services.service_dict(**service_dict['service'])
-        with pytest.raises(mydir.DoesNotExist):
-            mydir.unpublish(name=service['name'])
-        mydir.publish(service=service)
+        with pytest.raises(temp_dir.DoesNotExist):
+            temp_dir.unpublish(name=service['name'])
+        temp_dir.publish(service=service)
     for service_dict in EXAMPLE_SERVICES.values():
         service = services.service_dict(**service_dict['service'])
-        mydir.unpublish(name=service['name'])
-        with pytest.raises(mydir.DoesNotExist):
-            mydir.unpublish(name=service['name'])
+        temp_dir.unpublish(name=service['name'])
+        with pytest.raises(temp_dir.DoesNotExist):
+            temp_dir.unpublish(name=service['name'])
 
-def test_servicedir_service():
+def test_servicedir_service(temp_dir):
     """Test ServiceDirectory.service"""
-    db_dir = tempfile.TemporaryDirectory()
-    mydir = directory.ServiceDirectory(database=db_dir.name)
     for service_dict in EXAMPLE_SERVICES.values():
         service = services.service_dict(**service_dict['service'])
-        with pytest.raises(mydir.DoesNotExist):
-            mydir.service(name=service['name'])
-        mydir.publish(service=service)
+        with pytest.raises(temp_dir.DoesNotExist):
+            temp_dir.service(name=service['name'])
+        temp_dir.publish(service=service)
     for service_dict in EXAMPLE_SERVICES.values():
         service = services.service_dict(**service_dict['service'])
-        output = mydir.service(name=service['name'])
+        output = temp_dir.service(name=service['name'])
         for key in service.keys():
             assert output[key] == service[key]
     for service_dict in EXAMPLE_SERVICES.values():
-        mydir.unpublish(name=service_dict['service']['name'])
-        with pytest.raises(mydir.DoesNotExist):
-            mydir.service(name=service_dict['service']['name'])
+        temp_dir.unpublish(name=service_dict['service']['name'])
+        with pytest.raises(temp_dir.DoesNotExist):
+            temp_dir.service(name=service_dict['service']['name'])
 
-def test_servicedir_service_list():
+def test_servicedir_service_list(temp_dir):
     """Test ServiceDirectory.service_list, ServiceDirectory.types"""
-    db_dir = tempfile.TemporaryDirectory()
-    mydir = directory.ServiceDirectory(database=db_dir.name)
     count = 0
     for service_dict in EXAMPLE_SERVICES.values():
         service = services.service_dict(**service_dict['service'])
-        mydir.publish(service=service)
+        temp_dir.publish(service=service)
         count += 1
-        output = mydir.service_list()
+        output = temp_dir.service_list()
         assert service['name'] in [srv['name'] for srv in output]
         assert len(output) == count
-        output = mydir.types()
+        output = temp_dir.types()
         assert service['type'] in output
     for service_dict in EXAMPLE_SERVICES.values():
-        output = mydir.service_list()
+        output = temp_dir.service_list()
         assert service_dict['service']['name'] in [srv['name'] for srv in output]
-        mydir.unpublish(name=service_dict['service']['name'])
+        temp_dir.unpublish(name=service_dict['service']['name'])
         count -= 1
-        output = mydir.service_list()
+        output = temp_dir.service_list()
         assert service_dict['service']['name'] not in [srv['name'] for srv in output]
         assert len(output) == count
-    assert len(mydir.types()) == 0
+    assert len(temp_dir.types()) == 0
 
-def test_servicedir_callbacks():
+def test_servicedir_callbacks(temp_dir):
     """Test ServiceDirectory.add_notify_callback, ServiceDirectory.del_notify_callback"""
     callback = mock.MagicMock()
-    db_dir = tempfile.TemporaryDirectory()
-    mydir = directory.ServiceDirectory(database=db_dir.name)
-    mydir.add_notify_callback(callback)
-    mydir.add_notify_callback(callback)
-    mydir.add_notify_callback(callback)
+    temp_dir.add_notify_callback(callback)
+    temp_dir.add_notify_callback(callback)
+    temp_dir.add_notify_callback(callback)
     assert callback.call_count == 0
     service = services.service_dict(name='testservice')
-    mydir.publish(service=service)
+    temp_dir.publish(service=service)
     assert callback.call_count == 1
-    mydir.unpublish(name=service['name'])
+    temp_dir.unpublish(name=service['name'])
     assert callback.call_count == 2
-    mydir.del_notify_callback(callback)
-    mydir.publish(service=service)
+    temp_dir.del_notify_callback(callback)
+    temp_dir.publish(service=service)
     assert callback.call_count == 2
-    mydir.del_notify_callback(callback)
-    mydir.unpublish(name=service['name'])
+    temp_dir.del_notify_callback(callback)
+    temp_dir.unpublish(name=service['name'])
     assert callback.call_count == 2

@@ -181,6 +181,13 @@ def test_coap_service(test_format, coap_server_filled): #pylint: disable=redefin
         assert res.code in (Code.CONTENT, )
         output = service_from_payload(res.payload.decode('utf-8'))
         assert output == testcase['service']
+    name = 'nonexistant.service._coap._udp'
+    req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))
+    req.opt.accept = content_format
+    req.opt.uri_path = URI_PATH_SERVICE + (name, )
+    res = yield from coap_server.site.render(req)
+    assert isinstance(res, aiocoap.Message)
+    assert res.code in (Code.NOT_FOUND, )
 
 @pytest.mark.parametrize("test_format", TEST_FORMATS)
 @pytest.mark.asyncio

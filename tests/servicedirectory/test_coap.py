@@ -7,6 +7,7 @@ from unittest import mock
 import tempfile
 import json
 from collections import namedtuple
+import xml.etree.ElementTree as ET
 
 import pytest
 
@@ -35,17 +36,26 @@ EXPECTED_ROOT_RESOURCES = (
     URI_PATH_UNPUBLISH,
     )
 
-TEST_FORMATS = ['json', pytest.mark.xfail('xml')]
+TEST_FORMATS = ['json', 'xml']
 
 def name_to_payload(name, test_format):
     """Convert service name to a payload for use with /unpublish"""
     if test_format == 'json':
-        payload = json.dumps({'name': name}).encode('utf-8')
+        return json.dumps({'name': name}).encode('utf-8')
     elif test_format == 'xml':
-        payload = '<service><name>{}</name></service>'.format(name).encode('utf-8')
+        return '<service><name>{}</name></service>'.format(name).encode('utf-8')
     else:
         pytest.fail('Not implemented for test_format={}'.format(test_format))
-    return payload
+
+def service_list_from_payload(payload, test_format):
+    """Convert to service list from payload format"""
+    if test_format == 'json':
+        return [services.service_from_json_dict(x) for x in json.loads(payload)['service']]
+    elif test_format == 'xml':
+        root = ET.fromstring(payload)
+        return [services.service_from_xml(ET.tostring(x)) for x in root]
+    else:
+        pytest.fail('Not implemented for test_format={}'.format(test_format))
 
 @pytest.yield_fixture
 def directory_spy():
@@ -172,7 +182,27 @@ def test_coap_service(test_format, coap_server_filled): #pylint: disable=redefin
         output = service_from_payload(res.payload.decode('utf-8'))
         assert output == testcase['service']
 
-
+@pytest.mark.parametrize("test_format", TEST_FORMATS)
+@pytest.mark.asyncio
+def test_coap_service_list(test_format, coap_server_filled): #pylint: disable=redefined-outer-name
+    """Test CoAP service query"""
+    coap_server = coap_server_filled.coap_server
+    mydir = coap_server_filled.directory_spy.real
+    numitems = len(mydir.service_list())
+    content_format = aiocoap.numbers.media_types_rev['application/' + test_format]
+    req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))
+    req.opt.accept = content_format
+    req.opt.uri_path = URI_PATH_SERVICE
+    res = yield from coap_server.site.render(req)
+    assert isinstance(res, aiocoap.Message)
+    assert res.code in (Code.CONTENT, )
+    slist = service_list_from_payload(res.payload.decode('utf-8'), test_format)
+    sdict = {srv['name']: srv for srv in slist}
+    assert len(slist) == numitems
+    for service in mydir.service_list():
+        assert service['name'] in sdict
+        for key in services.service_dict().keys():
+            assert sdict[service['name']][key] == service[key]
 
 @pytest.mark.parametrize("test_format", TEST_FORMATS)
 @pytest.mark.asyncio

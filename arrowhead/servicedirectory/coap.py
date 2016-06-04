@@ -126,8 +126,9 @@ class ServiceResource(LogMixin, resource.ObservableResource):
         name = '/'.join(request.postpath)
         self.log.debug('GET service %s' % (name, ))
         if name:
-            service = self._directory.service(name=name)
-            if service is None:
+            try:
+                service = self._directory.service(name=name)
+            except self._directory.DoesNotExist:
                 # Could not find a service by that name, send response code
                 return aiocoap.Message(code=Code.NOT_FOUND, payload='')
             return self._render_service(request, service)

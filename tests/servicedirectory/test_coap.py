@@ -234,6 +234,25 @@ def test_coap_unpublish(test_format, coap_server_filled): #pylint: disable=redef
             if call[0] == 'unpublish':
                 assert call == mock.call.unpublish(name=name)
 
+@pytest.mark.parametrize("test_format", TEST_FORMATS)
+@pytest.mark.asyncio
+def test_coap_unpublish_noname(test_format, coap_server_filled): #pylint: disable=redefined-outer-name
+    """Test CoAP unpublish without name parameter"""
+    coap_server = coap_server_filled.coap_server
+    dir_spy = coap_server_filled.directory_spy.spy
+    content_format = aiocoap.numbers.media_types_rev['application/' + test_format]
+
+    # call unpublish without a name parameter
+    dir_spy.reset_mock()
+    name = ''
+    payload = name_to_payload(name, test_format)
+    req = aiocoap.Message(code=Code.POST, payload=payload)
+    req.opt.content_format = content_format
+    req.opt.uri_path = URI_PATH_UNPUBLISH
+    with pytest.raises(coap.BadRequestError):
+        yield from coap_server.site.render(req)
+    assert dir_spy.unpublish.call_count == 0
+
 @pytest.mark.asyncio
 def test_coap_publish_bad_type(coap_server_setup): #pylint: disable=redefined-outer-name
     """Test CoAP publish with unknown content formats"""

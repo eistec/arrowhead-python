@@ -171,11 +171,7 @@ if HAVE_XML:
                     raise ServiceError(
                         "Multiple occurrence of property tag <%s>: '%s', '%s'" %
                         child_prop.tag, values[child_prop.tag], child_prop.text)
-                if child_prop.text is None:
-                    raise ServiceError(
-                        "Empty property tag <%s>" %
-                        child_prop.tag)
-                values[child_prop.tag] = child_prop.text.strip()
+                values[child_prop.tag] = child_prop.text and child_prop.text.strip() or ''
 
             for key, value in values.items():
                 if value is None:
@@ -185,7 +181,7 @@ if HAVE_XML:
                 raise ServiceError(
                     "Multiple occurrence of property '{}': '{}', '{}'".format(
                         values['name'], props[values['name']], values['value']))
-            props[values['name']] = values['value'].strip()
+            props[values['name']] = values['value']
         return props
 
     def service_from_xml(xmlstr):
@@ -207,7 +203,7 @@ if HAVE_XML:
                 props = _service_parse_xml_props(node)
                 res['properties'] = props
             elif node.tag in SERVICE_ATTRIBUTES:
-                res[node.tag] = node.text.strip()
+                res[node.tag] = node.text and node.text.strip() or ''
                 if node.tag == 'port':
                     res[node.tag] = int(res[node.tag])
                 if list(node):

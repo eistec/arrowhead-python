@@ -60,7 +60,7 @@ def test_servicedir_publish():
         for key in service.keys():
             assert getattr(service_entry, key) == getattr(expected_service_entry, key)
 
-def test_servicedir_unpublish(temp_dir):
+def test_servicedir_unpublish(temp_dir): #pylint: disable=redefined-outer-name
     """Test ServiceDirectory.unpublish"""
     for service_dict in EXAMPLE_SERVICES.values():
         service = services.service_dict(**service_dict['service'])
@@ -73,7 +73,7 @@ def test_servicedir_unpublish(temp_dir):
         with pytest.raises(temp_dir.DoesNotExist):
             temp_dir.unpublish(name=service['name'])
 
-def test_servicedir_service(temp_dir):
+def test_servicedir_service(temp_dir): #pylint: disable=redefined-outer-name
     """Test ServiceDirectory.service"""
     for service_dict in EXAMPLE_SERVICES.values():
         service = services.service_dict(**service_dict['service'])
@@ -90,7 +90,7 @@ def test_servicedir_service(temp_dir):
         with pytest.raises(temp_dir.DoesNotExist):
             temp_dir.service(name=service_dict['service']['name'])
 
-def test_servicedir_service_list(temp_dir):
+def test_servicedir_service_list(temp_dir): #pylint: disable=redefined-outer-name
     """Test ServiceDirectory.service_list, ServiceDirectory.types"""
     count = 0
     for service_dict in EXAMPLE_SERVICES.values():
@@ -112,7 +112,7 @@ def test_servicedir_service_list(temp_dir):
         assert len(output) == count
     assert len(temp_dir.types()) == 0
 
-def test_servicedir_callbacks(temp_dir):
+def test_servicedir_callbacks(temp_dir): #pylint: disable=redefined-outer-name
     """Test ServiceDirectory.add_notify_callback, ServiceDirectory.del_notify_callback"""
     callback = mock.MagicMock()
     temp_dir.add_notify_callback(callback)

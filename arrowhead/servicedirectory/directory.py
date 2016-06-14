@@ -198,7 +198,9 @@ class ServiceDirectory(Directory):
         self.log.debug('list %r', search)
         now = unix_now()
         # Find all services with deadline >= now
-        services = self._db.filter(self.Service, {'deadline': {'$gte': now}})
+        criteria = {key: value for key, value in search.items()}
+        criteria['deadline'] = {'$gte': now}
+        services = self._db.filter(self.Service, criteria)
         res = [dict(service.attributes.copy()) for service in services]
         return res
 

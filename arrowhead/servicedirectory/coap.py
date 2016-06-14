@@ -66,25 +66,42 @@ class BadRequestError(aiocoap.error.RenderableError):
     code = Code.BAD_REQUEST
     message = "BadRequest"
 
+class PathRegex(str):
+    """Regular expression match in resource path components"""
+
 class Site(LogMixin, resource.Site):
     """CoAP Site resource with path regex matching"""
 
     @asyncio.coroutine
     def render(self, request):
-        """Dispatch rendering to the best matching resource"""
         path = tuple(request.opt.uri_path)
         # Only compare against resources with the same number of path components
         matches = [(key, res) for key, res in self._resources.items() if len(key) == len(path)]
+        # Filter routes matching the path, one level at a time
         for level in range(len(path)):
-            # Filter routes matching the path, one level at a time
-            matches = [(key, res) for key, res in matches if re.fullmatch(key[level], path[level])]
+            # Try to find exact string matches
+            string_matches = [
+                (key, res) for key, res in matches \
+                if not isinstance(key[level], PathRegex) and \
+                key[level] == path[level]
+                ]
+            if string_matches:
+                # string matches have a higher priority than regex matches
+                matches = string_matches
+                continue
+            # Try to find any regex matches
+            matches = [
+                (key, res) for key, res in matches \
+                if isinstance(key[level], PathRegex) and \
+                re.fullmatch(key[level], path[level])
+                ]
         if len(matches) == 0:
             raise aiocoap.error.NoResource()
         elif len(matches) > 1:
             raise aiocoap.error.RenderableError(
                 "Ambiguous matches: {} = {}".format(repr(path), repr(matches)))
-        self.log.info("{} -> {}".format(repr(path), repr(matches[0][0])))
-        return matches[0][1].render(request)
+        child = matches[0][1]
+        return child.render(request)
 
 class ServiceDirectoryCoAP(RequestDispatcher, Site):
     """Service Directory resource handler class"""
@@ -168,11 +185,11 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
         self.add_resource(
             self.uri_prefix + ('service', ), self._servicelist_resource)
         self.add_resource(
-            self.uri_prefix + ('service', '.*'), self._service_resource)
+            self.uri_prefix + ('service', PathRegex('.*')), self._service_resource)
         self.add_resource(
             self.uri_prefix + ('type', ), self._typelist_resource)
         self.add_resource(
-            self.uri_prefix + ('type', '.*'), self._type_resource)
+            self.uri_prefix + ('type', PathRegex('.*')), self._type_resource)
         self.add_resource(
             self.uri_prefix + ('publish', ),
             self.Resource(post=self._render_publish))

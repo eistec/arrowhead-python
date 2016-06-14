@@ -103,6 +103,10 @@ def test_servicedir_service_list(temp_dir): #pylint: disable=redefined-outer-nam
         output = temp_dir.types()
         assert service['type'] in output
     for service_dict in EXAMPLE_SERVICES.values():
+        service = services.service_dict(**service_dict['service'])
+        output = temp_dir.service_list(type=service['type'])
+        assert not [srv for srv in output if srv['type'] != service['type']]
+    for service_dict in EXAMPLE_SERVICES.values():
         output = temp_dir.service_list()
         assert service_dict['service']['name'] in [srv['name'] for srv in output]
         temp_dir.unpublish(name=service_dict['service']['name'])

@@ -142,7 +142,7 @@ class ServiceDirectory(Directory):
         """
         # Copy the attributes from the Serivce object to a dict, omitting
         # anything beginning with an underscore
-        scopy = service.as_dict()
+        scopy = service.to_dict()
         # Add last updated time stamp and refresh deadline
         now = unix_now()
         lifetime = self._get_config_value('lifetime')

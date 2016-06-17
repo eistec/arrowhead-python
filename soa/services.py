@@ -57,25 +57,30 @@ if HAVE_LINK_HEADER:
     ])
 
 
-class Service(object):
+class Service(object): # pylint: disable=too-few-public-methods
+    """Service description class
+
+    This class contains the same fields as are available in the service registry
+    """
     def __init__(self, *args, **kwargs):
         """Constructor
 
         :param kwargs: Keyword arguments for the attributes of the Service
         """
-        # Default to None on missing attrs
+        # Default to None on missing attributes
         attrs = {key: kwargs.pop(key, None) for key in SERVICE_ATTRIBUTES}
         props = kwargs.pop('properties', {})
         super().__init__(*args, **kwargs)
         self.properties = SimpleNamespace(**props)
-        self.__dict__.update(attrs)
+        for attr, value in attrs.items():
+            setattr(self, attr, value)
 
     def __repr__(self):
         keys = sorted(self.__dict__.keys())
         items = ("{}={!r}".format(key, getattr(self, key)) for key in keys)
         return "{}({})".format(type(self).__name__, ", ".join(items))
 
-    def as_dict(self):
+    def to_dict(self):
         """Copy the service information to a new dict"""
         res = {key: getattr(self, key) for key in SERVICE_ATTRIBUTES}
         res['properties'] = self.properties.__dict__.copy()
@@ -96,7 +101,7 @@ class Service(object):
         """Make this object hashable"""
         # Note that it is only necessary that objects that compare equal also
         # have the same hash, therefore we don't need to hash all attributes.
-        return hash((self.name, self.type))
+        return hash((self.name, self.type)) # pylint: disable=no-member
 
 
 class ServiceError(RuntimeError):
@@ -137,11 +142,13 @@ if HAVE_JSON:
                 jsonstr = payload
             return service_from_json_dict(json.loads(jsonstr))
         except ValueError as exc:
-            raise ServiceError('ValueError while parsing JSON service: {}'.format(str(exc)))
+            raise ServiceError(
+                'ValueError while parsing JSON service: {}'.format(str(exc)))
 
     def service_to_json_dict(service):
         """Convert a Service to a JSON representation dict"""
-        props = [{'name': key, 'value': value} for key, value in service.properties.__dict__.items()]
+        props = [{'name': key, 'value': value} \
+            for key, value in service.properties.__dict__.items()]
         res = {key: getattr(service, key) for key in SERVICE_ATTRIBUTES}
         res['properties'] = {"property": props}
         return res

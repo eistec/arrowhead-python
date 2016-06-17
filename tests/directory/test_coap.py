@@ -85,7 +85,8 @@ def coap_server_filled(coap_server_setup): #pylint: disable=redefined-outer-name
     """Yield a CoAP Server with some pre-populated services"""
     for testcase in EXAMPLE_SERVICES.values():
         # Put some services in the registry
-        coap_server_setup.directory_spy.real.publish(service=services.Service(**testcase['service']))
+        coap_server_setup.directory_spy.real.publish(
+            service=services.Service(**testcase['service']))
     yield coap_server_setup
 
 def test_coap_server(directory_spy): #pylint: disable=redefined-outer-name

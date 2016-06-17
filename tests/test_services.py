@@ -10,7 +10,7 @@ from .test_data import EXAMPLE_SERVICES, BROKEN_XML
 
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
-def test_Service(testcase):
+def test_Service(testcase): # pylint: disable=invalid-name
     """Test the Service constructor"""
     indata_dict = testcase[1]['service']
     service = services.Service(**indata_dict)
@@ -19,7 +19,7 @@ def test_Service(testcase):
     for name, value in indata_dict['properties'].items():
         assert getattr(service.properties, name) == value
 
-def test_Service_eq():
+def test_Service_eq(): # pylint: disable=invalid-name
     """Test Service comparison operations"""
     for lhs_case in EXAMPLE_SERVICES.values():
         lhs_dict = lhs_case['service']
@@ -35,9 +35,9 @@ def test_Service_eq():
                     equal = False
             if equal:
                 assert lhs_service == rhs_service
-                assert not lhs_service != rhs_service
+                assert not lhs_service != rhs_service # pylint: disable=unneeded-not
             else:
-                assert not lhs_service == rhs_service
+                assert not lhs_service == rhs_service # pylint: disable=unneeded-not
                 assert lhs_service != rhs_service
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))

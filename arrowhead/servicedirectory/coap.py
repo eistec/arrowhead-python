@@ -171,7 +171,7 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
             media_types_rev['application/link-format']: self._tlist_to_corelf,
         }
         self._create_resources()
-        self.log.debug('Resources: {}'.format(repr(self._resources)))
+        self.log.debug('Resources: %r', self._resources)
         self._directory = directory
         self._directory.add_notify_callback(self.notify)
         self.notify()
@@ -299,12 +299,12 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
                 request, self.service_input_handlers, request.payload.decode('utf-8'))
         except services.ServiceError:
             raise BadRequestError()
-        if not service['name']:
+        if not service.name:
             # bad input
             raise BadRequestError()
 
         try:
-            self._directory.service(name=service['name'])
+            self._directory.service(name=service.name)
         except self._directory.DoesNotExist:
             code = Code.CREATED
         else:
@@ -332,10 +332,10 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
             service = self.dispatch_input(request, self.service_input_handlers, request.payload)
         except services.ServiceError:
             raise BadRequestError()
-        if not service['name']:
+        if not service.name:
             # bad input
             raise BadRequestError()
-        self._directory.unpublish(name=service['name'])
+        self._directory.unpublish(name=service.name)
         payload = 'POST OK'
         code = Code.DELETED
         msg = aiocoap.Message(code=code, payload=payload.encode('utf-8'))

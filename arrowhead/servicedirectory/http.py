@@ -245,7 +245,7 @@ class Server(LogMixin, web.Application):
         try:
             self._directory.unpublish(name=name)
         except self._directory.DoesNotExist:
-            self.log.info('Service %s is not published' % (name, ))
+            self.log.info('Service %s is not published', name)
             raise web.HTTPBadRequest(reason='Service %s is not published' % (name, ))
         self.log.info('Unpublish %s OK', name)
         payload = 'Unpublish OK'

@@ -1,4 +1,6 @@
 """Functions for serialization/deserialization of Arrowhead services"""
+from types import SimpleNamespace
+
 try:
     import json
 except ImportError:
@@ -26,8 +28,8 @@ else:
 SERVICE_ATTRIBUTES = ("name", "type", "host", "port", "domain")
 
 __all__ = [
+    'Service',
     'ServiceError',
-    'service_dict',
     'service_to_xml',
     'servicelist_to_xml',
     'service_to_corelf',
@@ -54,15 +56,52 @@ if HAVE_LINK_HEADER:
         'typelist_to_corelf',
     ])
 
+
+class Service(object):
+    def __init__(self, *args, **kwargs):
+        """Constructor
+
+        :param kwargs: Keyword arguments for the attributes of the Service
+        """
+        # Default to None on missing attrs
+        attrs = {key: kwargs.pop(key, None) for key in SERVICE_ATTRIBUTES}
+        props = kwargs.pop('properties', {})
+        super().__init__(*args, **kwargs)
+        self.properties = SimpleNamespace(**props)
+        self.__dict__.update(attrs)
+
+    def __repr__(self):
+        keys = sorted(self.__dict__.keys())
+        items = ("{}={!r}".format(key, getattr(self, key)) for key in keys)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
+
+    def as_dict(self):
+        """Copy the service information to a new dict"""
+        res = {key: getattr(self, key) for key in SERVICE_ATTRIBUTES}
+        res['properties'] = self.properties.__dict__.copy()
+        return res
+
+    def __eq__(self, other):
+        for attr in SERVICE_ATTRIBUTES:
+            if not getattr(self, attr) == getattr(other, attr):
+                return False
+        for prop in self.properties.__dict__.keys():
+            if not hasattr(other.properties, prop):
+                return False
+            if not getattr(self.properties, prop) == getattr(other.properties, prop):
+                return False
+        return True
+
+    def __hash__(self):
+        """Make this object hashable"""
+        # Note that it is only necessary that objects that compare equal also
+        # have the same hash, therefore we don't need to hash all attributes.
+        return hash((self.name, self.type))
+
+
 class ServiceError(RuntimeError):
     """Exception raised by run time errors in this module"""
 
-
-def service_dict(**kwargs):
-    """Create a new service dict"""
-    res = {key: kwargs.get(key, None) for key in SERVICE_ATTRIBUTES}
-    res['properties'] = kwargs.get('properties', {})
-    return res
 
 if HAVE_JSON:
     def service_from_json_dict(js_dict):
@@ -81,7 +120,7 @@ if HAVE_JSON:
                 props[jprop['name']] = jprop['value']
             except KeyError:
                 continue
-        return service_dict(properties=props, **attrs)
+        return Service(properties=props, **attrs)
 
     def service_from_json(payload):
         """Create a service dict from a JSON string representation of the service
@@ -101,10 +140,9 @@ if HAVE_JSON:
             raise ServiceError('ValueError while parsing JSON service: {}'.format(str(exc)))
 
     def service_to_json_dict(service):
-        """Convert a service dict to a JSON representation dict"""
-        props = [{'name': name, 'value': value}
-                 for name, value in service['properties'].items()]
-        res = {key: service.get(key, None) for key in SERVICE_ATTRIBUTES}
+        """Convert a Service to a JSON representation dict"""
+        props = [{'name': key, 'value': value} for key, value in service.properties.__dict__.items()]
+        res = {key: getattr(service, key) for key in SERVICE_ATTRIBUTES}
         res['properties'] = {"property": props}
         return res
 
@@ -130,7 +168,7 @@ def service_to_xml(service):
     # note: Does not use any xml functions, hence unaffected by HAVE_XML
     props = ''.join(
         ('<property><name>%s</name><value>%s</value></property>' % (k, v))
-        for (k, v) in service['properties'].items())
+        for (k, v) in service.properties.__dict__.items())
     xml_str = (
         '<service>'
         '<name>%s</name>'
@@ -139,11 +177,11 @@ def service_to_xml(service):
         '<host>%s</host>'
         '<port>%s</port>'
         '<properties>%s</properties>'
-        '</service>') % (service['name'],
-                         service['type'],
-                         service['domain'],
-                         service['host'],
-                         service['port'],
+        '</service>') % (service.name,
+                         service.type,
+                         service.domain,
+                         service.host,
+                         service.port,
                          props)
     return xml_str
 
@@ -186,7 +224,7 @@ if HAVE_XML:
 
     def service_from_xml(xmlstr):
         """Convert XML representation of service to service dict"""
-        res = service_dict()
+        res = Service()
         try:
             root = ET.fromstring(xmlstr)
         except ET.ParseError:
@@ -194,26 +232,32 @@ if HAVE_XML:
         if root.tag != 'service':
             raise ServiceError('Missing <service> tag')
         for node in root:
-            if node.tag in res and res[node.tag]:
+            if node.tag == 'properties':
+                if len(res.properties.__dict__) > 0:
+                    raise ServiceError(
+                        "Multiple occurrence of tag <%s>" %
+                        node.tag, getattr(res, node.tag), node.text)
+
+                props = _service_parse_xml_props(node)
+                res.properties.__dict__.update(props)
+            elif node.tag not in SERVICE_ATTRIBUTES:
+                raise ServiceError(
+                    "Unknown service tag <%s>" %
+                    node.tag)
+            elif getattr(res, node.tag) is not None:
                 # disallow multiple occurrences of the same tag
                 raise ServiceError(
                     "Multiple occurrence of tag <%s>" %
-                    node.tag, res[node.tag], node.text)
-            if node.tag == 'properties':
-                props = _service_parse_xml_props(node)
-                res['properties'] = props
-            elif node.tag in SERVICE_ATTRIBUTES:
-                res[node.tag] = node.text and node.text.strip() or ''
+                    node.tag, getattr(res, node.tag), node.text)
+            else:
+                val = node.text and node.text.strip() or ''
                 if node.tag == 'port':
-                    res[node.tag] = int(res[node.tag])
+                    val = int(val)
+                setattr(res, node.tag, val)
                 if list(node):
                     raise ServiceError(
                         "Nested service tag <{0}>{1}</{0}>".format(
                             node.tag, repr(list(node))))
-            else:
-                raise ServiceError(
-                    "Unknown service tag <%s>" %
-                    node.tag)
         return res
 
 
@@ -223,14 +267,14 @@ def service_to_corelf(service):
     :param service: Service to convert
     :type service: dict
     """
-    host = str(service['host'])
+    host = str(service.host)
     if ':' in host:
         # assume IPv6 address, wrap in brackets for URL construction
         host = '[%s]' % host
-    port = str(service['port'])
+    port = str(service.port)
     if port:
         port = ':' + port
-    path = service['properties'].get('path', '/')
+    path = getattr(service.properties, 'path', '/')
     if path and path[0] != '/':
         path = '/' + path
     link_str = '<coap://%s%s%s>' % (host, port, path)
@@ -274,7 +318,7 @@ if HAVE_LINK_HEADER:
         :rtype: string
         """
         return link_header.format_links(
-            [link_header.Link('{0}/{1}'.format(uri_base, s['name'])) for s in slist])
+            [link_header.Link('{0}/{1}'.format(uri_base, srv.name)) for srv in slist])
 
 if HAVE_JSON:
     def typelist_to_json(tlist):

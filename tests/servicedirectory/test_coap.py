@@ -15,9 +15,9 @@ import link_header
 from aiocoap.numbers.codes import Code
 import aiocoap
 
+from arrowhead import services
 from arrowhead.servicedirectory import directory
 from arrowhead.servicedirectory import coap
-from arrowhead import services
 import arrowhead
 
 from ..test_data import EXAMPLE_SERVICES, BROKEN_SERVICES
@@ -85,7 +85,7 @@ def coap_server_filled(coap_server_setup): #pylint: disable=redefined-outer-name
     """Yield a CoAP Server with some pre-populated services"""
     for testcase in EXAMPLE_SERVICES.values():
         # Put some services in the registry
-        coap_server_setup.directory_spy.real.publish(service=testcase['service'])
+        coap_server_setup.directory_spy.real.publish(service=services.Service(**testcase['service']))
     yield coap_server_setup
 
 def test_coap_server(directory_spy): #pylint: disable=redefined-outer-name
@@ -145,13 +145,13 @@ def test_coap_publish(test_format, coap_server_setup): #pylint: disable=redefine
         assert dir_spy.publish.call_count == 1
         for call in dir_spy.method_calls:
             if call[0] == 'publish':
-                assert call == mock.call.publish(service=testcase['service'])
+                assert call == mock.call.publish(service=services.Service(**testcase['service']))
 
     for testcase in EXAMPLE_SERVICES.values():
         # Update the published service
         dir_spy.reset_mock()
-        service = services.service_dict(**testcase['service'])
-        service['port'] = int(service['port']) + 111
+        service = services.Service(**testcase['service'])
+        service.port = int(service.port) + 111
         payload = service_to_payload(service).encode('utf-8')
         req = aiocoap.Message(code=Code.POST, payload=payload)
         req.opt.content_format = content_format
@@ -172,7 +172,8 @@ def test_coap_service(test_format, coap_server_filled): #pylint: disable=redefin
     content_format = aiocoap.numbers.media_types_rev['application/' + test_format]
     service_from_payload = getattr(services, 'service_from_' + test_format)
     for testcase in EXAMPLE_SERVICES.values():
-        name = testcase['service']['name']
+        service = services.Service(**testcase['service'])
+        name = service.name
         req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))
         req.opt.accept = content_format
         req.opt.uri_path = URI_PATH_SERVICE + (name, )
@@ -180,7 +181,7 @@ def test_coap_service(test_format, coap_server_filled): #pylint: disable=redefin
         assert isinstance(res, aiocoap.Message)
         assert res.code in (Code.CONTENT, )
         output = service_from_payload(res.payload.decode('utf-8'))
-        assert output == testcase['service']
+        assert output == service
     name = 'nonexistant.service._coap._udp'
     req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))
     req.opt.accept = content_format
@@ -202,13 +203,34 @@ def test_coap_service_list(test_format, coap_server_filled): #pylint: disable=re
     res = yield from coap_server.site.render(req)
     assert isinstance(res, aiocoap.Message)
     assert res.code in (Code.CONTENT, )
+    assert res.opt.content_format == content_format
     slist = service_list_from_payload(res.payload.decode('utf-8'), test_format)
-    sdict = {srv['name']: srv for srv in slist}
+    sdict = {srv.name: srv for srv in slist}
     assert len(slist) == numitems
     for service in mydir.service_list():
-        assert service['name'] in sdict
-        for key in services.service_dict().keys():
-            assert sdict[service['name']][key] == service[key]
+        assert service.name in sdict
+        assert sdict[service.name] == service
+
+@pytest.mark.asyncio
+def test_coap_service_list_corelf(coap_server_filled): #pylint: disable=redefined-outer-name
+    """Test CoAP service query"""
+    coap_server = coap_server_filled.coap_server
+    mydir = coap_server_filled.directory_spy.real
+    numitems = len(mydir.service_list())
+    content_format = aiocoap.numbers.media_types_rev['application/link-format']
+    req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))
+    req.opt.accept = content_format
+    req.opt.uri_path = URI_PATH_SERVICE
+    res = yield from coap_server.site.render(req)
+    assert isinstance(res, aiocoap.Message)
+    assert res.code in (Code.CONTENT, )
+    assert res.opt.content_format == content_format
+    slist = link_header.parse(res.payload.decode('utf-8'))
+    sdict = {tuple(link.href.strip('/').split('/')): link for link in slist.links}
+    assert len(slist.links) == numitems
+    for service in mydir.service_list():
+        assert URI_PATH_SERVICE + (service.name, ) in sdict
+        #assert sdict[URI_PATH_SERVICE + (service.name, )] == service
 
 @pytest.mark.parametrize("test_format", TEST_FORMATS)
 @pytest.mark.asyncio
@@ -326,9 +348,8 @@ def test_coap_service_default(coap_server_filled): #pylint: disable=redefined-ou
     assert isinstance(res, aiocoap.Message)
     assert res.code in (Code.CONTENT, )
     slist = service_list_from_payload(res.payload.decode('utf-8'), test_format)
-    sdict = {srv['name']: srv for srv in slist}
+    sdict = {srv.name: srv for srv in slist}
     assert len(slist) == numitems
     for service in mydir.service_list():
-        assert service['name'] in sdict
-        for key in services.service_dict().keys():
-            assert sdict[service['name']][key] == service[key]
+        assert service.name in sdict
+        assert sdict[service.name] == service

@@ -57,7 +57,7 @@ def main(argv=None):
             port=args.http_port)
         asyncio.async(http_server)
 
-    asyncio.get_event_loop().run_forever()
+    loop.run_forever()
 
 if __name__ == "__main__":
     import sys

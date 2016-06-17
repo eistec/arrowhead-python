@@ -10,6 +10,7 @@ import tempfile
 import blitzdb
 
 from .. import LogMixin
+from ..services import Service as AHService
 
 
 def unix_now():
@@ -50,11 +51,11 @@ class Directory(LogMixin, object): # pylint: disable=too-few-public-methods
             # TemporaryDirectory will delete the temporary directory when the
             # object is destroyed
             self._tempdir = tempfile.TemporaryDirectory()
-            self.log.debug("Using temporary database at %s", self._tempdir.name)
+            self.log.info("Using temporary database at '%s'", self._tempdir.name)
             self._db = blitzdb.FileBackend(self._tempdir.name, dbsettings)
         elif isinstance(database, str):
             # database is used as a file name
-            self.log.debug("Using database at '%s'", database)
+            self.log.info("Using database at '%s'", database)
             self._db = blitzdb.FileBackend(database, dbsettings)
         else:
             # database is used as-is
@@ -139,14 +140,16 @@ class ServiceDirectory(Directory):
         :param service: The service to update
         :type service: dict
         """
+        # Copy the attributes from the Serivce object to a dict, omitting
+        # anything beginning with an underscore
+        scopy = service.as_dict()
         # Add last updated time stamp and refresh deadline
-        scopy = service.copy()
         now = unix_now()
         lifetime = self._get_config_value('lifetime')
         scopy['updated'] = now
         scopy['deadline'] = now + lifetime
         self.log.debug('publish: %r', scopy)
-        old_service = self._db.filter(self.Service, {'name': service['name']})
+        old_service = self._db.filter(self.Service, {'name': service.name})
         self.log.debug('remove %r', [s for s in old_service])
         old_service.delete()
         self._db.commit()
@@ -163,7 +166,7 @@ class ServiceDirectory(Directory):
         :param name: The name of the service to delete
         :type name: string
         """
-        self.log.debug('unpublish: %s' % (name, ))
+        self.log.debug('unpublish: %s', name)
         service = self._db.filter(self.Service, {'name': name})
         if len(service) == 0:
             raise self.DoesNotExist()
@@ -185,7 +188,11 @@ class ServiceDirectory(Directory):
             service = self._db.get(self.Service, {'name': name})
         except self.Service.DoesNotExist: #pylint: disable=no-member
             raise self.DoesNotExist('Not found: {}'.format(name))
-        return dict(service.attributes.copy())
+        sdict = service.attributes.copy()
+        # Delete the deadline and updated meta information before returning
+        sdict.pop('deadline', None)
+        sdict.pop('updated', None)
+        return AHService(**sdict)
 
     def service_list(self, **search):
         """Get a list of services matching the given criteria
@@ -200,8 +207,12 @@ class ServiceDirectory(Directory):
         # Find all services with deadline >= now
         criteria = {key: value for key, value in search.items()}
         criteria['deadline'] = {'$gte': now}
-        services = self._db.filter(self.Service, criteria)
-        res = [dict(service.attributes.copy()) for service in services]
+        service_records = self._db.filter(self.Service, criteria)
+        service_dicts = [service.attributes.copy() for service in service_records]
+        for srv in service_dicts:
+            srv.pop('deadline', None)
+            srv.pop('updated', None)
+        res = [AHService(**srv) for srv in service_dicts]
         return res
 
     def types(self):
@@ -211,6 +222,6 @@ class ServiceDirectory(Directory):
         :rtype: set
         """
         slist = self.service_list()
-        self.log.debug('types %r', slist)
-        types = {service['type'] for service in slist}
+        types = {service.type for service in slist}
+        self.log.debug('types %r', types)
         return types

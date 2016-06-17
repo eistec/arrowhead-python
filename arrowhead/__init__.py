@@ -5,6 +5,7 @@ import logging
 from logging import NullHandler
 
 from . import services
+from .services import Service
 
 class LogMixin(object):
     """Log mixin class
@@ -37,4 +38,4 @@ logging.getLogger(__name__).addHandler(NullHandler())
 
 __version__ = '0.1.0-alpha'
 
-__all__ = ['services', 'logging']
+__all__ = ['Service', 'services', 'logging']

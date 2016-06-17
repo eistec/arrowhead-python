@@ -3,20 +3,42 @@ import json
 import xml.etree.ElementTree as ET
 
 import pytest
+import link_header
 from arrowhead import services
 from .test_data import EXAMPLE_SERVICES, BROKEN_XML
 
+
+
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
-def test_service_dict(testcase):
-    '''Verify that all basic service information gets set by the constructor'''
-    # testcase is a tuple (testname, indata)
+def test_Service(testcase):
+    """Test the Service constructor"""
     indata_dict = testcase[1]['service']
-    service = services.service_dict(**indata_dict)
+    service = services.Service(**indata_dict)
     for attr in indata_dict.keys() - ['properties']:
-        assert service[attr] == indata_dict[attr]
+        assert getattr(service, attr) == indata_dict[attr]
     for name, value in indata_dict['properties'].items():
-        assert name in service['properties']
-        assert value == service['properties'][name]
+        assert getattr(service.properties, name) == value
+
+def test_Service_eq():
+    """Test Service comparison operations"""
+    for lhs_case in EXAMPLE_SERVICES.values():
+        lhs_dict = lhs_case['service']
+        lhs_service = services.Service(**lhs_dict)
+        for rhs_case in EXAMPLE_SERVICES.values():
+            rhs_service = services.Service(**rhs_case['service'])
+            equal = True
+            for attr in lhs_dict.keys() - ['properties']:
+                if not getattr(rhs_service, attr) == lhs_dict[attr]:
+                    equal = False
+            for prop in lhs_dict['properties'].keys():
+                if not getattr(rhs_service.properties, prop) == lhs_dict['properties'][prop]:
+                    equal = False
+            if equal:
+                assert lhs_service == rhs_service
+                assert not lhs_service != rhs_service
+            else:
+                assert not lhs_service == rhs_service
+                assert lhs_service != rhs_service
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_to_json(testcase):
@@ -24,7 +46,8 @@ def test_service_to_json(testcase):
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
     expected_dict = indata_dict
-    service_json = services.service_to_json(indata_dict)
+    service_input = services.Service(**indata_dict)
+    service_json = services.service_to_json(service_input)
     service = json.loads(service_json)
     assert set(service.keys()) == set(expected_dict.keys())
     for key in service.keys() - ['properties']:
@@ -43,7 +66,8 @@ def test_service_to_xml(testcase):
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
     expected_dict = indata_dict
-    service_xml = services.service_to_xml(indata_dict)
+    service_input = services.Service(**indata_dict)
+    service_xml = services.service_to_xml(service_input)
     root = ET.fromstring(service_xml)
     assert root.tag == 'service'
     service = {}
@@ -96,10 +120,9 @@ def test_service_from_json(testcase):
     expected_dict = testcase[1]['service']
     service = services.service_from_json(json_input)
     for key in expected_dict.keys() - ['properties']:
-        assert service[key] == expected_dict[key]
+        assert getattr(service, key) == expected_dict[key]
     for name, value in expected_dict['properties'].items():
-        assert name in service['properties']
-        assert value == service['properties'][name]
+        assert getattr(service.properties, name) == value
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_from_xml(testcase):
@@ -109,10 +132,9 @@ def test_service_from_xml(testcase):
     expected_dict = testcase[1]['service']
     service = services.service_from_xml(xml_input)
     for key in expected_dict.keys() - ['properties']:
-        assert service[key] == expected_dict[key]
+        assert getattr(service, key) == expected_dict[key]
     for name, value in expected_dict['properties'].items():
-        assert name in service['properties']
-        assert value == service['properties'][name]
+        assert getattr(service.properties, name) == value
 
 @pytest.mark.parametrize('testcase', BROKEN_XML.items(), ids=(lambda x: str(x[0])))
 def test_service_from_xml_neg(testcase):
@@ -120,4 +142,14 @@ def test_service_from_xml_neg(testcase):
     xml_input = testcase[1]
     with pytest.raises(services.ServiceError):
         service = services.service_from_xml(xml_input)
-        assert isinstance(service, dict)
+        assert isinstance(service, services.Service)
+
+def test_servicelist_to_corelf():
+    '''service_to_corelf should give a Link object'''
+    slist = [services.Service(**case['service']) for case in EXAMPLE_SERVICES.values()]
+    links = link_header.parse(str(services.servicelist_to_corelf(slist, '/uri/base')))
+    uris = {('uri', 'base') + (srv.name, ) for srv in slist}
+    for link in links.links:
+        assert tuple(link.href.strip('/').split('/')) in uris
+        uris.remove(tuple(link.href.strip('/').split('/')))
+    assert len(uris) == 0

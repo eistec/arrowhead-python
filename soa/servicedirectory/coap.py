@@ -152,7 +152,7 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
         """Constructor
 
         :param directory: Service directory backend
-        :type directory: arrowhead.servicedirectory.directory.ServiceDirectory
+        :type directory: soa.servicedirectory.directory.ServiceDirectory
         :param uri_prefix: URI prefix for this site
         :type uri_prefix: tuple(strings...)
         """
@@ -349,7 +349,7 @@ class Server(object):
         """Constructor
 
         :param directory: Service directory to use as backend
-        :type directory: arrowhead.servicedirectory.ServiceDirectory
+        :type directory: soa.servicedirectory.ServiceDirectory
         """
         super().__init__()
         self._directory = directory

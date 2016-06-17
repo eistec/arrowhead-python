@@ -1,10 +1,10 @@
-"""Test top level arrowhead module"""
+"""Test top level soa module"""
 import logging
-import arrowhead
+import soa
 
 def test_log_mixin():
     """Test that the LogMixin provides a log object"""
-    class TestLog(arrowhead.LogMixin, object): #pylint: disable=too-few-public-methods
+    class TestLog(soa.LogMixin, object): #pylint: disable=too-few-public-methods
         """Test class"""
 
     class MyLogger(object): #pylint: disable=too-few-public-methods

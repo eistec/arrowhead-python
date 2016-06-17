@@ -16,8 +16,8 @@ RUN apk add --update \
   && rm -rf /var/cache/apk/*
 
 # Copy files, must run `python setup.py sdist` prior to building in order to create the source package
-COPY dist/arrowhead*.tar.gz /tmp/
-RUN pip3 install /tmp/arrowhead*.tar.gz && rm /tmp/arrowhead*.tar.gz
+COPY dist/soa*.tar.gz /tmp/
+RUN pip3 install /tmp/soa*.tar.gz && rm /tmp/soa*.tar.gz
 
 # Create application directory and an empty database file
 # will run as unprivileged servicedirectory user

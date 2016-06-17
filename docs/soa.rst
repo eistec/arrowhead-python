@@ -1,20 +1,20 @@
-arrowhead package
-=================
+soa package
+===========
 
 Subpackages
 -----------
 
 .. toctree::
 
-    arrowhead.servicedirectory
+    soa.servicedirectory
 
 Submodules
 ----------
 
-arrowhead.services module
--------------------------
+soa.services module
+-------------------
 
-.. automodule:: arrowhead.services
+.. automodule:: soa.services
     :members:
     :undoc-members:
     :show-inheritance:
@@ -23,7 +23,7 @@ arrowhead.services module
 Module contents
 ---------------
 
-.. automodule:: arrowhead
+.. automodule:: soa
     :members:
     :undoc-members:
     :show-inheritance:

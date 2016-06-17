@@ -125,7 +125,7 @@ if HAVE_JSON:
     def service_from_json(payload):
         """Create a service dict from a JSON string representation of the service
 
-        The JSON string can be obtained from :meth:`arrowhead.services.service_to_json`
+        The JSON string can be obtained from :meth:`soa.services.service_to_json`
 
         :param payload: JSON string representation of a service
         :type payload: string or bytes

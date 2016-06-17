@@ -232,7 +232,7 @@ dummy:
 
 .PHONY: rst
 rst:
-	sphinx-apidoc -f -o . ../arrowhead
+	sphinx-apidoc -f -o . ../soa
 
 .PHONY: view
 view: html

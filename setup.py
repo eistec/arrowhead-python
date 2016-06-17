@@ -6,7 +6,7 @@ import io
 import os
 import sys
 
-import arrowhead
+import soa
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -35,7 +35,7 @@ long_description = read('README.rst')
 class PyTest(TestCommand):
     def finalize_options(self):
         TestCommand.finalize_options(self)
-        self.test_args = ['--pylint','--cov','arrowhead','arrowhead','tests']
+        self.test_args = ['--pylint','--cov','soa','soa','tests']
         self.test_suite = True
 
     def run_tests(self):
@@ -44,8 +44,8 @@ class PyTest(TestCommand):
         sys.exit(errcode)
 
 setup(
-    name='arrowhead',
-    version=arrowhead.__version__,
+    name='soa',
+    version=soa.__version__,
     url='https://github.com/eistec/arrowhead-python/',
     download_url='https://github.com/eistec/arrowhead-python/archive/v0.1.0-alpha.tar.gz',
     license='Apache Software License',
@@ -56,7 +56,7 @@ setup(
     author_email='joakim.nohlgard@eistec.se',
     description='Arrowhead core services',
     long_description=long_description,
-    packages=['arrowhead','arrowhead.servicedirectory'],
+    packages=['soa','soa.servicedirectory'],
     include_package_data=True,
     platforms='any',
     classifiers = [
@@ -73,6 +73,9 @@ setup(
         ],
     keywords=[
         'arrowhead',
+        'soa',
+        'service',
+        'iot',
         'coap',
     ],
     extras_require={

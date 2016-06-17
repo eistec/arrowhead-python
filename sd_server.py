@@ -6,9 +6,9 @@ import argparse
 import asyncio
 import ipaddress
 
-from arrowhead.servicedirectory import ServiceDirectory
-from arrowhead.servicedirectory import coap
-from arrowhead.servicedirectory import http
+from soa.servicedirectory import ServiceDirectory
+from soa.servicedirectory import coap
+from soa.servicedirectory import http
 
 loglevels = [logging.CRITICAL, logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
 
@@ -32,7 +32,7 @@ def main(argv=None):
     logging.basicConfig(level=loglevels[args.verbosity-1])
     # selective log levels
     #logging.getLogger("coap-server").setLevel(logging.DEBUG)
-    #logging.getLogger("arrowhead").setLevel(logging.DEBUG)
+    #logging.getLogger("soa").setLevel(logging.DEBUG)
 
     directory = ServiceDirectory(args.dbfile)
 

@@ -15,7 +15,7 @@ class Server(LogMixin, web.Application):
         """Constructor
 
         :param directory: Service directory to use as backend
-        :type directory: arrowhead.servicedirectory.ServiceDirectory
+        :type directory: soa.servicedirectory.ServiceDirectory
         """
         super().__init__(*args, **kwargs)
         self._directory = directory

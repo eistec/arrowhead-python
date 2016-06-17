@@ -1,4 +1,4 @@
-"""Test that the arrowhead.services module can import without some library modules present"""
+"""Test that the soa.services module can import without some library modules present"""
 import importlib
 from unittest import mock
 import pytest
@@ -39,8 +39,8 @@ TEST_SETUP = {
 
 @pytest.mark.parametrize('testcase', TEST_SETUP.items(), ids=(lambda x: str(x[0])))
 def test_have_json(testcase):
-    """Verify that the arrowhead.services module imports without the json module present"""
-    services = importlib.import_module('arrowhead.services')
+    """Verify that the soa.services module imports without the json module present"""
+    services = importlib.import_module('soa.services')
     importlib.reload(services)
 
     assert getattr(services, testcase[1]['indicator'])
@@ -48,7 +48,7 @@ def test_have_json(testcase):
         assert func in services.__dict__
     del services
     with mock.patch.dict('sys.modules', {name: None for name in testcase[1]['deleted_modules']}):
-        services = importlib.import_module('arrowhead.services')
+        services = importlib.import_module('soa.services')
         importlib.reload(services)
         assert not getattr(services, testcase[1]['indicator'])
         for func in testcase[1]['missing_functions']:

@@ -1,10 +1,10 @@
-"""Unit tests for arrowhead.services"""
+"""Unit tests for soa.services"""
 import json
 import xml.etree.ElementTree as ET
 
 import pytest
 import link_header
-from arrowhead import services
+from soa import services
 from .test_data import EXAMPLE_SERVICES, BROKEN_XML
 
 

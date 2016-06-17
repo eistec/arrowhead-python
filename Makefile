@@ -8,10 +8,10 @@ init:
 
 tests: test
 test:
-	py.test --pylint arrowhead tests
+	py.test --pylint soa tests
 
 cov:
-	py.test --cov=arrowhead --cov-report=html --cov-report=term arrowhead tests
+	py.test --cov=soa --cov-report=html --cov-report=term soa tests
 	xdg-open coverage_report_html/index.html
 
 docs: doc

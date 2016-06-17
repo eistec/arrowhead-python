@@ -1,7 +1,7 @@
-arrowhead
-=========
+soa
+===
 
 .. toctree::
    :maxdepth: 4
 
-   arrowhead
+   soa

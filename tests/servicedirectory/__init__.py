@@ -1,1 +1,1 @@
-"""Tests for arrowhead.servicedirectory"""
+"""Tests for soa.servicedirectory"""

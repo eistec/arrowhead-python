@@ -25,6 +25,8 @@ except ImportError:
 else:
     HAVE_LINK_HEADER = True
 
+import attr
+
 SERVICE_ATTRIBUTES = ("name", "type", "host", "port", "domain")
 
 __all__ = [
@@ -57,56 +59,32 @@ if HAVE_LINK_HEADER:
     ])
 
 
-class Service(object): # pylint: disable=too-few-public-methods
+@attr.s # pylint: disable=too-few-public-methods
+class Service(object):
     """Service description class
 
     This class contains the same fields as are available in the service registry
     """
-    def __init__(self, *args, **kwargs):
-        """Constructor
-
-        :param kwargs: Keyword arguments for the attributes of the Service
-        """
-        # Default to None on missing attributes
-        attrs = {key: kwargs.pop(key, None) for key in SERVICE_ATTRIBUTES}
-        props = kwargs.pop('properties', {})
-        super().__init__(*args, **kwargs)
-        self.properties = SimpleNamespace(**props)
-        for attr, value in attrs.items():
-            setattr(self, attr, value)
-
-    def __repr__(self):
-        keys = sorted(self.__dict__.keys())
-        items = ("{}={!r}".format(key, getattr(self, key)) for key in keys)
-        return "{}({})".format(type(self).__name__, ", ".join(items))
-
-    def to_dict(self):
-        """Copy the service information to a new dict"""
-        res = {key: getattr(self, key) for key in SERVICE_ATTRIBUTES}
-        res['properties'] = self.properties.__dict__.copy()
-        return res
-
-    def __eq__(self, other):
-        for attr in SERVICE_ATTRIBUTES:
-            if not getattr(self, attr) == getattr(other, attr):
-                return False
-        for prop in self.properties.__dict__.keys():
-            if not hasattr(other.properties, prop):
-                return False
-            if not getattr(self.properties, prop) == getattr(other.properties, prop):
-                return False
-        return True
-
-    def __hash__(self):
-        """Make this object hashable"""
-        # Note that it is only necessary that objects that compare equal also
-        # have the same hash, therefore we don't need to hash all attributes.
-        return hash((self.name, self.type)) # pylint: disable=no-member
+    name = attr.ib(default=None)
+    type = attr.ib(default=None)
+    host = attr.ib(default=None, hash=False)
+    port = attr.ib(default=None, hash=False)
+    domain = attr.ib(default=None, hash=False)
+    properties = attr.ib(
+        default={}, hash=False,
+        convert=lambda prop_dict: SimpleNamespace(**prop_dict))
 
 
 class ServiceError(RuntimeError):
     """Exception raised by run time errors in this module"""
 
+
+def service_to_dict(service):
+    """Copy the values of a Service into a new dict"""
+    srv_dict = attr.asdict(service)
+    props = srv_dict['properties']
+    srv_dict['properties'] = {key: getattr(props, key) for key in props.__dict__.keys()}
+    return srv_dict
 
 if HAVE_JSON:
     def service_from_json_dict(js_dict):

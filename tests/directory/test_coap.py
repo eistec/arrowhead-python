@@ -174,7 +174,7 @@ def test_coap_service(test_format, coap_server_filled): #pylint: disable=redefin
     service_from_payload = getattr(services, 'service_from_' + test_format)
     for testcase in EXAMPLE_SERVICES.values():
         service = services.Service(**testcase['service'])
-        name = service.name
+        name = str(service.name)
         req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))
         req.opt.accept = content_format
         req.opt.uri_path = URI_PATH_SERVICE + (name, )

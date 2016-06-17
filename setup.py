@@ -46,7 +46,8 @@ class PyTest(TestCommand):
 setup(
     name='arrowhead',
     version=arrowhead.__version__,
-    url='http://github.com/eistec/arrowhead-python/',
+    url='https://github.com/eistec/arrowhead-python/',
+    download_url='https://github.com/eistec/arrowhead-python/archive/master.zip',
     license='Apache Software License',
     author='Joakim Nohlgård',
     tests_require=tests_require,
@@ -70,6 +71,10 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Internet :: Name Service (DNS)',
         ],
+    keywords=[
+        'arrowhead',
+        'coap',
+    ],
     extras_require={
         'testing': ['pytest'],
     }

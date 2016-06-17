@@ -1,0 +1,15 @@
+CHANGES
+=======
+
+0.2.0
+-----
+
+- Package name changed from ``arrowhead`` to ``soa``, in order to avoid
+  conflicts with an existing, but unrelated to the Arrowhead project, library
+  already registered on PyPI.
+- Use the ``attrs`` library for the Service class implementation
+
+0.1.0-alpha
+-----------
+
+- Initial pre-release version

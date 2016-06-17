@@ -47,7 +47,7 @@ setup(
     name='soa',
     version=soa.__version__,
     url='https://github.com/eistec/arrowhead-python/',
-    download_url='https://github.com/eistec/arrowhead-python/archive/v0.1.0-alpha.tar.gz',
+    download_url='https://github.com/eistec/arrowhead-python/archive/v0.2.0.tar.gz',
     license='Apache Software License',
     author='Joakim Nohlgård',
     tests_require=tests_require,

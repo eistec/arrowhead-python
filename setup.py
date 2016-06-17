@@ -47,7 +47,7 @@ setup(
     name='arrowhead',
     version=arrowhead.__version__,
     url='https://github.com/eistec/arrowhead-python/',
-    download_url='https://github.com/eistec/arrowhead-python/archive/master.zip',
+    download_url='https://github.com/eistec/arrowhead-python/archive/v0.1.0-alpha.tar.gz',
     license='Apache Software License',
     author='Joakim Nohlgård',
     tests_require=tests_require,

@@ -20,9 +20,9 @@ COPY dist/soa*.tar.gz /tmp/
 RUN pip3 install /tmp/soa*.tar.gz && rm /tmp/soa*.tar.gz
 
 # Create application directory and an empty database file
-# will run as unprivileged servicedirectory user
+# will run as unprivileged directory user
 RUN mkdir -p /opt/core-services \
-  && useradd -r -d /opt/core-services -s /sbin/nologin -U servicedirectory
+  && useradd -r -d /opt/core-services -s /sbin/nologin -U directory
 COPY sd_server.py /opt/core-services/
 
 # Install startup script

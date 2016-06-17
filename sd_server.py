@@ -6,9 +6,9 @@ import argparse
 import asyncio
 import ipaddress
 
-from soa.servicedirectory import ServiceDirectory
-from soa.servicedirectory import coap
-from soa.servicedirectory import http
+from soa.directory import ServiceDirectory
+from soa.directory import coap
+from soa.directory import http
 
 loglevels = [logging.CRITICAL, logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
 

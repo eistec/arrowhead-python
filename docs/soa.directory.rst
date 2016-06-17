@@ -1,29 +1,29 @@
-soa.servicedirectory package
+soa.directory package
 ============================
 
 Submodules
 ----------
 
-soa.servicedirectory.coap module
+soa.directory.coap module
 --------------------------------
 
-.. automodule:: soa.servicedirectory.coap
+.. automodule:: soa.directory.coap
     :members:
     :undoc-members:
     :show-inheritance:
 
-soa.servicedirectory.directory module
+soa.directory.directory module
 -------------------------------------
 
-.. automodule:: soa.servicedirectory.directory
+.. automodule:: soa.directory.directory
     :members:
     :undoc-members:
     :show-inheritance:
 
-soa.servicedirectory.http module
+soa.directory.http module
 --------------------------------
 
-.. automodule:: soa.servicedirectory.http
+.. automodule:: soa.directory.http
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,7 +32,7 @@ soa.servicedirectory.http module
 Module contents
 ---------------
 
-.. automodule:: soa.servicedirectory
+.. automodule:: soa.directory
     :members:
     :undoc-members:
     :show-inheritance:

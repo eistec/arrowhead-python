@@ -1,4 +1,4 @@
-"""Test the soa.servicedirectory.directory module"""
+"""Test the soa.directory.directory module"""
 #pylint: disable=no-member
 # pylint doesn't understand mock objects
 
@@ -8,7 +8,7 @@ import tempfile
 import pytest
 import blitzdb
 
-from soa.servicedirectory import directory
+from soa.directory import directory
 from soa import services
 
 from ..test_data import EXAMPLE_SERVICES
@@ -31,14 +31,14 @@ def test_servicedir_ctor_nowrite():
 def test_servicedir_ctor_dir():
     """Verify that the constructor creates a database in the given directory"""
     db_dir = tempfile.TemporaryDirectory()
-    with mock.patch('soa.servicedirectory.directory.blitzdb.FileBackend'):
+    with mock.patch('soa.directory.directory.blitzdb.FileBackend'):
         mydir = directory.ServiceDirectory(database=db_dir.name)
         directory.blitzdb.FileBackend.assert_called_once_with(db_dir.name, mock.ANY)
         assert isinstance(mydir, directory.Directory)
 
 def test_servicedir_ctor_nodir():
     """Verify that the constructor creates a temporary database if not given a directory"""
-    with mock.patch('soa.servicedirectory.directory.blitzdb.FileBackend'):
+    with mock.patch('soa.directory.directory.blitzdb.FileBackend'):
         mydir = directory.ServiceDirectory(database=None)
         assert directory.blitzdb.FileBackend.call_count == 1
         arg = directory.blitzdb.FileBackend.call_args[0][0]

@@ -1,4 +1,4 @@
-"""Test soa.servicedirectory.coap"""
+"""Test soa.directory.coap"""
 #pylint: disable=no-member
 # pylint doesn't understand mock objects
 
@@ -16,8 +16,8 @@ from aiocoap.numbers.codes import Code
 import aiocoap
 
 from soa import services
-from soa.servicedirectory import directory
-from soa.servicedirectory import coap
+from soa.directory import directory
+from soa.directory import coap
 import soa
 
 from ..test_data import EXAMPLE_SERVICES, BROKEN_SERVICES
@@ -75,7 +75,7 @@ def coap_server_setup(directory_spy): #pylint: disable=redefined-outer-name
     """Set up a CoAP server with stubbed server context to avoid network use"""
     CoAPTestcase = namedtuple( #pylint: disable=invalid-name
         'CoAPTestcase', ['coap_server', 'directory_spy'])
-    with mock.patch('soa.servicedirectory.coap.aiocoap.Context'):
+    with mock.patch('soa.directory.coap.aiocoap.Context'):
         coap_server = coap.Server(directory=directory_spy.spy)
         directory_spy.spy.reset_mock()
         yield CoAPTestcase(coap_server, directory_spy)
@@ -92,11 +92,11 @@ def test_coap_server(directory_spy): #pylint: disable=redefined-outer-name
     """Test initialization of the CoAP Server object"""
     coap_bind = '127.0.0.1'
     coap_port = random.randint(1024, 60000)
-    with mock.patch('soa.servicedirectory.coap.aiocoap.Context'):
+    with mock.patch('soa.directory.coap.aiocoap.Context'):
         coap_server = coap.Server(directory=directory_spy.spy, bind=(coap_bind, coap_port))
         assert isinstance(coap_server, coap.Server)
-        assert soa.servicedirectory.coap.aiocoap.Context.create_server_context.call_count == 1
-        soa.servicedirectory.coap.\
+        assert soa.directory.coap.aiocoap.Context.create_server_context.call_count == 1
+        soa.directory.coap.\
             aiocoap.Context.create_server_context.\
             assert_called_once_with(mock.ANY, bind=(coap_bind, coap_port))
         for call in directory_spy.spy.method_calls:

@@ -56,7 +56,7 @@ setup(
     author_email='joakim.nohlgard@eistec.se',
     description='Arrowhead core services',
     long_description=long_description,
-    packages=['soa','soa.servicedirectory'],
+    packages=['soa','soa.directory'],
     include_package_data=True,
     platforms='any',
     classifiers = [

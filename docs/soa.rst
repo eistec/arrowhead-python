@@ -6,7 +6,7 @@ Subpackages
 
 .. toctree::
 
-    soa.servicedirectory
+    soa.directory
 
 Submodules
 ----------

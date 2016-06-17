@@ -11,14 +11,6 @@ Subpackages
 Submodules
 ----------
 
-arrowhead.log module
---------------------
-
-.. automodule:: arrowhead.log
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 arrowhead.services module
 -------------------------
 

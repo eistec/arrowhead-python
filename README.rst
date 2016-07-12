@@ -1,6 +1,8 @@
 Arrowhead Core Services
 ***********************
 
+For an introduction to the Arrowhead Framework, see http://www.arrowhead.eu
+
 A Python library for interacting with Arrowhead services, including a CoAP+HTTP
 service registry server with IPv6 support.
 

@@ -1,5 +1,7 @@
-Arrowhead Core Services
-***********************
+Service Oriented Architecture
+*****************************
+
+... using the Arrowhead Framework Core services.
 
 *For an introduction to the Arrowhead Framework, see http://www.arrowhead.eu*
 

@@ -21,7 +21,9 @@ Licensing
 
 Released under the Arrowhead Framework Licensing terms, which is a dual license
 Eclipse Public License and Apache License v2.0. For more details, see the
-LICENSE.txt file in this repository.
+`LICENSE.txt
+<https://github.com/eistec/arrowhead-python/blob/master/LICENSE.txt>`_ file in
+this repository.
 
 Quick start
 ===========

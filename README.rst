@@ -1,10 +1,25 @@
 Arrowhead Core Services
 ***********************
 
-For an introduction to the Arrowhead Framework, see http://www.arrowhead.eu
+*For an introduction to the Arrowhead Framework, see http://www.arrowhead.eu*
 
 A Python library for interacting with Arrowhead services, including a CoAP+HTTP
 service registry server with IPv6 support.
+
+Development
+===========
+
+This code is released as open source, the main development repository is hosted
+on GitHub at https://github.com/eistec/arrowhead-python
+
+For guidelines on contributing to the project, see `CONTRIBUTING <https://github.com/eistec/arrowhead-python/blob/master/CONTRIBUTING.rst>`_
+
+Licensing
+=========
+
+Released under the Arrowhead Framework Licensing terms, which is a dual license
+Eclipse Public License and Apache License v2.0. For more details, see the
+LICENSE.txt file in this repository.
 
 Quick start
 ===========

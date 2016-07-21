@@ -121,13 +121,13 @@ class Server(LogMixin, web.Application):
         :returns: A HTTP response
         :rtype: aiohttp.web.Response
         """
-        content_handlers = {
-            'application/json': services.service_to_json,
-            'application/xml': services.service_to_xml,
-        }
         name = request.match_info.get('name', '(null)')
         service = self._directory.service(name=name)
-        return self.dispatch_request(request, content_handlers, service)
+        content_handlers = {
+            'application/json': service.to_json,
+            'application/xml': service.to_xml,
+        }
+        return self.dispatch_request(request, content_handlers)
 
     @asyncio.coroutine
     def type_list_get(self, request):
@@ -174,8 +174,8 @@ class Server(LogMixin, web.Application):
         :rtype: aiohttp.web.Response
         """
         content_handlers = {
-            'application/json': services.service_from_json,
-            'application/xml': services.service_from_xml,
+            'application/json': services.Service.from_json,
+            'application/xml': services.Service.from_xml,
         }
         try:
             handler = content_handlers[request.content_type]
@@ -197,7 +197,7 @@ class Server(LogMixin, web.Application):
             raise web.HTTPBadRequest(reason='Missing service name')
         else:
             try:
-                self._directory.service(name=service['name'])
+                self._directory.service(name=service.name)
             except self._directory.DoesNotExist:
                 code = web.HTTPCreated.status_code
             else:
@@ -219,8 +219,8 @@ class Server(LogMixin, web.Application):
         :rtype: aiohttp.web.Response
         """
         content_handlers = {
-            'application/json': services.service_from_json,
-            'application/xml': services.service_from_xml,
+            'application/json': services.Service.from_json,
+            'application/xml': services.Service.from_xml,
         }
         try:
             handler = content_handlers[request.content_type]
@@ -237,7 +237,7 @@ class Server(LogMixin, web.Application):
             # bad input
             raise web.HTTPBadRequest(reason='Invalid data, expected service')
 
-        name = service['name']
+        name = service.name
         if not name:
             # bad input
             raise web.HTTPBadRequest(reason='Missing service name')

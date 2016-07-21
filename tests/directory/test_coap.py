@@ -50,10 +50,10 @@ def name_to_payload(name, test_format):
 def service_list_from_payload(payload, test_format):
     """Convert to service list from payload format"""
     if test_format == 'json':
-        return [services.service_from_json_dict(x) for x in json.loads(payload)['service']]
+        return [services.Service.from_json_dict(x) for x in json.loads(payload)['service']]
     elif test_format == 'xml':
         root = ET.fromstring(payload)
-        return [services.service_from_xml(ET.tostring(x)) for x in root]
+        return [services.Service.from_xml(ET.tostring(x)) for x in root]
     else:
         pytest.fail('Not implemented for test_format={}'.format(test_format))
 
@@ -131,7 +131,6 @@ def test_coap_publish(test_format, coap_server_setup): #pylint: disable=redefine
     """Test CoAP publish with known good payloads"""
     coap_server = coap_server_setup.coap_server
     dir_spy = coap_server_setup.directory_spy.spy
-    service_to_payload = getattr(services, 'service_to_' + test_format)
     content_format = aiocoap.numbers.media_types_rev['application/' + test_format]
     for testcase in EXAMPLE_SERVICES.values():
         # Publish services
@@ -153,7 +152,8 @@ def test_coap_publish(test_format, coap_server_setup): #pylint: disable=redefine
         dir_spy.reset_mock()
         service = services.Service(**testcase['service'])
         service.port = int(service.port) + 111
-        payload = service_to_payload(service).encode('utf-8')
+        service_to_payload = getattr(service, 'to_' + test_format)
+        payload = service_to_payload()
         req = aiocoap.Message(code=Code.POST, payload=payload)
         req.opt.content_format = content_format
         req.opt.uri_path = URI_PATH_PUBLISH
@@ -171,7 +171,6 @@ def test_coap_service(test_format, coap_server_filled): #pylint: disable=redefin
     """Test CoAP service query"""
     coap_server = coap_server_filled.coap_server
     content_format = aiocoap.numbers.media_types_rev['application/' + test_format]
-    service_from_payload = getattr(services, 'service_from_' + test_format)
     for testcase in EXAMPLE_SERVICES.values():
         service = services.Service(**testcase['service'])
         name = str(service.name)
@@ -181,7 +180,7 @@ def test_coap_service(test_format, coap_server_filled): #pylint: disable=redefin
         res = yield from coap_server.site.render(req)
         assert isinstance(res, aiocoap.Message)
         assert res.code in (Code.CONTENT, )
-        output = service_from_payload(res.payload.decode('utf-8'))
+        output = services.Service.from_message(res)
         assert output == service
     name = 'nonexistant.service._coap._udp'
     req = aiocoap.Message(code=Code.GET, payload=''.encode('utf-8'))

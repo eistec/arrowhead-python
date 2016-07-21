@@ -10,7 +10,7 @@ import tempfile
 import blitzdb
 
 from .. import LogMixin
-from ..services import Service as AHService, service_to_dict
+from ..services import Service as AHService
 
 
 def unix_now():
@@ -140,7 +140,7 @@ class ServiceDirectory(Directory):
         :param service: The service to update
         :type service: dict
         """
-        scopy = service_to_dict(service)
+        scopy = service.to_dict()
         # Add last updated time stamp and refresh deadline
         now = unix_now()
         lifetime = self._get_config_value('lifetime')

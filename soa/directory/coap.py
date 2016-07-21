@@ -110,17 +110,6 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
 
     default_content_type = media_types_rev['application/json']
 
-    service_output_handlers = {
-        media_types_rev['application/json']: services.service_to_json,
-        media_types_rev['application/link-format']: services.service_to_corelf,
-        media_types_rev['application/xml']: services.service_to_xml,
-    }
-
-    service_input_handlers = {
-        media_types_rev['application/json']: services.service_from_json,
-        media_types_rev['application/xml']: services.service_from_xml,
-    }
-
     class Resource(resource.Resource):
         """Generic resource class"""
         def __init__(self, *args, get=None, put=None, post=None, delete=None, **kwargs):
@@ -228,8 +217,11 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
         except self._directory.DoesNotExist:
             # Could not find a service by that name, send response code
             raise NotFoundError()
-        payload = self.dispatch_output(request, self.service_output_handlers, service)
-        msg = aiocoap.Message(code=Code.CONTENT, payload=payload.encode('utf-8'))
+        try:
+            payload = service.to_bytes(request.opt.accept)
+        except services.UnknownContentError as exc:
+            raise UnsupportedMediaTypeError(str(exc))
+        msg = aiocoap.Message(code=Code.CONTENT, payload=payload)
         msg.opt.content_format = request.opt.accept
         if msg.opt.content_format is None:
             msg.opt.content_format = self.default_content_type
@@ -295,8 +287,9 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
         """
         self.log.debug('POST %r' % (request.opt.uri_path, ))
         try:
-            service = self.dispatch_input(
-                request, self.service_input_handlers, request.payload.decode('utf-8'))
+            service = services.Service.from_message(request)
+        except services.UnknownContentError as exc:
+            raise UnsupportedMediaTypeError(str(exc))
         except services.ServiceError:
             raise BadRequestError()
         if not service.name:
@@ -329,7 +322,7 @@ class ServiceDirectoryCoAP(RequestDispatcher, Site):
         :rtype: aiocoap.Message
         """
         try:
-            service = self.dispatch_input(request, self.service_input_handlers, request.payload)
+            service = services.Service.from_message(request)
         except services.ServiceError:
             raise BadRequestError()
         if not service.name:

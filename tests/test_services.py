@@ -42,12 +42,12 @@ def test_Service_eq(): # pylint: disable=invalid-name
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_to_json(testcase):
-    '''Loading the output from service_to_json should give the same dict as the input data'''
+    '''Loading the output from Service.to_json should give the same dict as the input data'''
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
     expected_dict = indata_dict
     service_input = services.Service(**indata_dict)
-    service_json = services.service_to_json(service_input)
+    service_json = service_input.to_json()
     service = json.loads(service_json)
     assert set(service.keys()) == set(expected_dict.keys())
     for key in service.keys() - ['properties']:
@@ -62,12 +62,12 @@ def test_service_to_json(testcase):
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_to_xml(testcase):
-    '''service_to_xml should give an xml representation of the service'''
+    '''Service.to_xml should give an xml representation of the service'''
     # testcase is a tuple (testname, indata)
     indata_dict = testcase[1]['service']
     expected_dict = indata_dict
     service_input = services.Service(**indata_dict)
-    service_xml = services.service_to_xml(service_input)
+    service_xml = service_input.to_xml()
     root = ET.fromstring(service_xml)
     assert root.tag == 'service'
     service = {}
@@ -114,11 +114,11 @@ def test_service_to_xml(testcase):
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_from_json(testcase):
-    '''service_from_json should create a service dict from JSON text'''
+    '''Service.from_json should create a service dict from JSON text'''
     # testcase is a tuple (testname, testdata)
     json_input = testcase[1]['as_json']
     expected_dict = testcase[1]['service']
-    service = services.service_from_json(json_input)
+    service = services.Service.from_json(json_input)
     for key in expected_dict.keys() - ['properties']:
         assert getattr(service, key) == expected_dict[key]
     for name, value in expected_dict['properties'].items():
@@ -126,11 +126,11 @@ def test_service_from_json(testcase):
 
 @pytest.mark.parametrize('testcase', EXAMPLE_SERVICES.items(), ids=(lambda x: str(x[0])))
 def test_service_from_xml(testcase):
-    '''service_from_xml should create a service dict from XML text'''
+    '''Service.from_xml should create a service dict from XML text'''
     # testcase is a tuple (testname, testdata)
     xml_input = testcase[1]['as_xml']
     expected_dict = testcase[1]['service']
-    service = services.service_from_xml(xml_input)
+    service = services.Service.from_xml(xml_input)
     for key in expected_dict.keys() - ['properties']:
         assert getattr(service, key) == expected_dict[key]
     for name, value in expected_dict['properties'].items():
@@ -138,14 +138,14 @@ def test_service_from_xml(testcase):
 
 @pytest.mark.parametrize('testcase', BROKEN_XML.items(), ids=(lambda x: str(x[0])))
 def test_service_from_xml_neg(testcase):
-    '''service_from_xml should raise exceptions on broken XML'''
+    '''Service.from_xml should raise exceptions on broken XML'''
     xml_input = testcase[1]
     with pytest.raises(services.ServiceError):
-        service = services.service_from_xml(xml_input)
+        service = services.Service.from_xml(xml_input)
         assert isinstance(service, services.Service)
 
 def test_servicelist_to_corelf():
-    '''service_to_corelf should give a Link object'''
+    '''Service.to_corelf should give a Link object'''
     slist = [services.Service(**case['service']) for case in EXAMPLE_SERVICES.values()]
     links = link_header.parse(str(services.servicelist_to_corelf(slist, '/uri/base')))
     uris = {('uri', 'base') + (srv.name, ) for srv in slist}

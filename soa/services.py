@@ -25,6 +25,7 @@ except ImportError:
 else:
     HAVE_LINK_HEADER = True
 
+from aiocoap.numbers import media_types_rev
 import attr
 
 SERVICE_ATTRIBUTES = ("name", "type", "host", "port", "domain")
@@ -32,31 +33,19 @@ SERVICE_ATTRIBUTES = ("name", "type", "host", "port", "domain")
 __all__ = [
     'Service',
     'ServiceError',
-    'service_to_xml',
     'servicelist_to_xml',
-    'service_to_corelf',
+    'servicelist_to_json',
+    'typelist_to_json',
+    'servicelist_to_corelf',
+    'typelist_to_corelf',
     ]
 
-if HAVE_JSON:
-    __all__.extend([
-        'service_from_json',
-        'service_from_json_dict',
-        'service_to_json',
-        'service_to_json_dict',
-        'servicelist_to_json',
-        'typelist_to_json',
-    ])
 
-if HAVE_XML:
-    __all__.extend([
-        'service_from_xml',
-    ])
+class ServiceError(RuntimeError):
+    """Exception raised by run time errors in this module"""
 
-if HAVE_LINK_HEADER:
-    __all__.extend([
-        'servicelist_to_corelf',
-        'typelist_to_corelf',
-    ])
+class UnknownContentError(ServiceError):
+    """Exception raised by run time errors in this module"""
 
 
 @attr.s # pylint: disable=too-few-public-methods
@@ -74,21 +63,29 @@ class Service(object):
         default={}, hash=False,
         convert=lambda prop_dict: SimpleNamespace(**prop_dict))
 
+    # Mapping content types in CoAP to translator function name prefix
+    media_type_to_name = {
+        media_types_rev['application/json']: 'json',
+        media_types_rev['application/xml']: 'xml',
+    }
 
-class ServiceError(RuntimeError):
-    """Exception raised by run time errors in this module"""
+    @classmethod
+    def from_message(cls, message):
+        """Create a Service object from a CoAP Message"""
+        # Dispatch handling of the request payload to a handler based on the
+        # given Content-format option
+        try:
+            input_handler = getattr(
+                cls, 'from_' + cls.media_type_to_name[message.opt.content_format])
+        except LookupError:
+            raise UnknownContentError(
+                "No translator for media type {}".format(message.opt.content_format))
+        else:
+            return input_handler(message.payload)
 
-
-def service_to_dict(service):
-    """Copy the values of a Service into a new dict"""
-    srv_dict = attr.asdict(service)
-    props = srv_dict['properties']
-    srv_dict['properties'] = {key: getattr(props, key) for key in props.__dict__.keys()}
-    return srv_dict
-
-if HAVE_JSON:
-    def service_from_json_dict(js_dict):
-        """Create a service dict from a dict of the JSON representation
+    @classmethod
+    def from_json_dict(cls, js_dict):
+        """Create a Service object from a dict of the JSON representation
 
         This is suitable for passing already parsed JSON dicts to.
 
@@ -105,8 +102,9 @@ if HAVE_JSON:
                 continue
         return Service(properties=props, **attrs)
 
-    def service_from_json(payload):
-        """Create a service dict from a JSON string representation of the service
+    @classmethod
+    def from_json(cls, payload):
+        """Create a Service object from a JSON string representation of the service
 
         The JSON string can be obtained from :meth:`soa.services.service_to_json`
 
@@ -114,63 +112,94 @@ if HAVE_JSON:
         :type payload: string or bytes
         """
         try:
-            if not isinstance(payload, str):
+            try:
                 jsonstr = payload.decode('utf-8')
-            else:
+            except AttributeError:
                 jsonstr = payload
-            return service_from_json_dict(json.loads(jsonstr))
+            return cls.from_json_dict(json.loads(jsonstr))
         except ValueError as exc:
             raise ServiceError(
                 'ValueError while parsing JSON service: {}'.format(str(exc)))
 
-    def service_to_json_dict(service):
-        """Convert a Service to a JSON representation dict"""
-        props = [{'name': key, 'value': value} \
-            for key, value in service.properties.__dict__.items()]
-        res = {key: getattr(service, key) for key in SERVICE_ATTRIBUTES}
-        res['properties'] = {"property": props}
-        return res
+    def to_bytes(self, media_type):
+        """Serialize a Service to the given content type"""
 
-    def service_to_json(service):
+        # Dispatch handling of the request payload to a handler based on the
+        # given Content-format option
+        try:
+            output_handler = getattr(self, 'to_' + self.media_type_to_name[media_type])
+        except LookupError:
+            raise UnknownContentError("No translator for media type {}".format(media_type))
+        buf = output_handler()
+        try:
+            # encode from str to bytes object
+            buf = buf.encode('utf-8')
+        except AttributeError:
+            # buf is already encoded or not a str
+            pass
+        return buf
+
+
+    def to_dict(self):
+        """Copy the values of a Service into a new dict"""
+        srv_dict = attr.asdict(self)
+        # convert SimpleNamespace to dict
+        props = srv_dict['properties']
+        srv_dict['properties'] = {key: getattr(props, key) for key in props.__dict__.keys()}
+        return srv_dict
+
+    def to_json_dict(self):
+        """Convert a Service to a JSON representation dict
+
+        Kludge which will go away if the SD JSON interface spec is improved"""
+        srv_dict = attr.asdict(self)
+        # convert SimpleNamespace to dict
+        props = srv_dict['properties']
+        srv_dict['properties'] = {
+            "property": [{'name': key, 'value': getattr(props, key)} \
+            for key in props.__dict__.keys()]}
+        return srv_dict
+
+    def to_json(self):
         """Convert a JSON service dict to JSON text
 
-        :param service: Service to convert
-        :type service: dict
+        :param self: Service to convert
+        :type self: Service
         :returns: The service encoded as an JSON string
         :rtype: string
         """
-        return json.dumps(service_to_json_dict(service))
+        return json.dumps(self.to_json_dict())
 
+    def to_xml(self):
+        """Convert a service dict to an XML representation
 
-def service_to_xml(service):
-    """Convert a service dict to an XML representation
+        :param self: Service to convert
+        :type self: Service
+        :returns: The service encoded as an XML string
+        :rtype: string
+        """
+        # note: Does not use any xml functions, hence unaffected by HAVE_XML
+        props = ''.join(
+            ('<property><name>%s</name><value>%s</value></property>' %
+             (key, getattr(self.properties, key)))
+            for key in self.properties.__dict__.keys())
+        xml_str = (
+            '<service>'
+            '<name>%s</name>'
+            '<type>%s</type>'
+            '<domain>%s</domain>'
+            '<host>%s</host>'
+            '<port>%s</port>'
+            '<properties>%s</properties>'
+            '</service>') % (self.name,
+                             self.type,
+                             self.domain,
+                             self.host,
+                             self.port,
+                             props)
+        return xml_str
 
-    :param service: Service to convert
-    :type service: dict
-    :returns: The service encoded as an XML string
-    :rtype: string
-    """
-    # note: Does not use any xml functions, hence unaffected by HAVE_XML
-    props = ''.join(
-        ('<property><name>%s</name><value>%s</value></property>' % (k, v))
-        for (k, v) in service.properties.__dict__.items())
-    xml_str = (
-        '<service>'
-        '<name>%s</name>'
-        '<type>%s</type>'
-        '<domain>%s</domain>'
-        '<host>%s</host>'
-        '<port>%s</port>'
-        '<properties>%s</properties>'
-        '</service>') % (service.name,
-                         service.type,
-                         service.domain,
-                         service.host,
-                         service.port,
-                         props)
-    return xml_str
-
-if HAVE_XML:
+    @staticmethod
     def _service_parse_xml_props(node):
         """Parse the ``<properties>`` XML tag
 
@@ -207,9 +236,10 @@ if HAVE_XML:
             props[values['name']] = values['value']
         return props
 
-    def service_from_xml(xmlstr):
+    @classmethod
+    def from_xml(cls, xmlstr):
         """Convert XML representation of service to service dict"""
-        res = Service()
+        res = cls()
         try:
             root = ET.fromstring(xmlstr)
         except ET.ParseError:
@@ -223,7 +253,7 @@ if HAVE_XML:
                         "Multiple occurrence of tag <%s>" %
                         node.tag, getattr(res, node.tag), node.text)
 
-                props = _service_parse_xml_props(node)
+                props = cls._service_parse_xml_props(node)
                 res.properties.__dict__.update(props)
             elif node.tag not in SERVICE_ATTRIBUTES:
                 raise ServiceError(
@@ -246,36 +276,35 @@ if HAVE_XML:
         return res
 
 
-def service_to_corelf(service):
-    """Convert a service dict to CoRE Link-format (:rfc:`6690`)
+    def to_corelf(self):
+        """Convert a service dict to CoRE Link-format (:rfc:`6690`)
 
-    :param service: Service to convert
-    :type service: dict
-    """
-    host = str(service.host)
-    if ':' in host:
-        # assume IPv6 address, wrap in brackets for URL construction
-        host = '[%s]' % host
-    port = str(service.port)
-    if port:
-        port = ':' + port
-    path = getattr(service.properties, 'path', '/')
-    if path and path[0] != '/':
-        path = '/' + path
-    link_str = '<coap://%s%s%s>' % (host, port, path)
-    return link_str
-
-
-if HAVE_JSON:
-    def servicelist_to_json(slist):
-        """Convert a list of service dicts to a JSON string
-
-        :param slist: List of services to convert
-        :type slist: iterable
-        :returns: The service list encoded as a JSON string
-        :rtype: string
+        :param self: Service to convert
+        :type self: Service
         """
-        return json.dumps({'service': [service_to_json_dict(s) for s in slist]})
+        host = str(self.host)
+        if ':' in host:
+            # assume IPv6 address, wrap in brackets for URL construction
+            host = '[%s]' % host
+        port = str(self.port)
+        if port:
+            port = ':' + port
+        path = getattr(self.properties, 'path', '/')
+        if path and path[0] != '/':
+            path = '/' + path
+        link_str = '<coap://%s%s%s>' % (host, port, path)
+        return link_str
+
+
+def servicelist_to_json(slist):
+    """Convert a list of service dicts to a JSON string
+
+    :param slist: List of services to convert
+    :type slist: iterable
+    :returns: The service list encoded as a JSON string
+    :rtype: string
+    """
+    return json.dumps({'service': [srv.to_json_dict() for srv in slist]})
 
 
 def servicelist_to_xml(slist):
@@ -288,45 +317,42 @@ def servicelist_to_xml(slist):
     """
 
     return '<serviceList>' + \
-        ''.join([service_to_xml(s) for s in slist]) + '</serviceList>'
+        ''.join([srv.to_xml() for srv in slist]) + '</serviceList>'
 
 
-if HAVE_LINK_HEADER:
-    def servicelist_to_corelf(slist, uri_base):
-        """Convert a list of services to a CoRE Link-format (:rfc:`6690`) string
+def servicelist_to_corelf(slist, uri_base):
+    """Convert a list of services to a CoRE Link-format (:rfc:`6690`) string
 
-        :param slist: List of services to convert
-        :type slist: iterable
-        :param uri_base: Base URI for the links
-        :type uri_base: string
-        :returns: The service list encoded as an application/link-format string
-        :rtype: string
-        """
-        return link_header.format_links(
-            [link_header.Link('{0}/{1}'.format(uri_base, srv.name)) for srv in slist])
+    :param slist: List of services to convert
+    :type slist: iterable
+    :param uri_base: Base URI for the links
+    :type uri_base: string
+    :returns: The service list encoded as an application/link-format string
+    :rtype: string
+    """
+    return link_header.format_links(
+        [link_header.Link('{0}/{1}'.format(uri_base, srv.name)) for srv in slist])
 
-if HAVE_JSON:
-    def typelist_to_json(tlist):
-        """Convert a list of service dicts to a JSON string
+def typelist_to_json(tlist):
+    """Convert a list of service dicts to a JSON string
 
-        :param tlist: List of service types to convert
-        :type tlist: iterable
-        :returns: The service list encoded as a JSON string
-        :rtype: string
-        """
-        return json.dumps({'serviceType': list(tlist)})
+    :param tlist: List of service types to convert
+    :type tlist: iterable
+    :returns: The service list encoded as a JSON string
+    :rtype: string
+    """
+    return json.dumps({'serviceType': list(tlist)})
 
+def typelist_to_corelf(tlist, uri_base):
+    """Convert a list of services to a CoRE Link-format (:rfc:`6690`) string
 
-if HAVE_LINK_HEADER:
-    def typelist_to_corelf(tlist, uri_base):
-        """Convert a list of services to a CoRE Link-format (:rfc:`6690`) string
+    :param tlist: List of service types to convert
+    :type tlist: iterable
+    :param uri_base: Base URI for the links
+    :type uri_base: string
+    :returns: The service list encoded as an application/link-format string
+    :rtype: string
+    """
+    return link_header.format_links(
+        [link_header.Link('{0}/{1}'.format(uri_base, t)) for t in tlist])
 
-        :param tlist: List of service types to convert
-        :type tlist: iterable
-        :param uri_base: Base URI for the links
-        :type uri_base: string
-        :returns: The service list encoded as an application/link-format string
-        :rtype: string
-        """
-        return link_header.format_links(
-            [link_header.Link('{0}/{1}'.format(uri_base, t)) for t in tlist])

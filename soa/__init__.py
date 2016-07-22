@@ -37,7 +37,7 @@ from .coap import ServiceDirectoryBrowser, CoAPObserver #pylint: disable=wrong-i
 # Set default logging handler to avoid "No handler found" warnings.
 logging.getLogger(__name__).addHandler(NullHandler())
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 
 __all__ = [
     'Service',

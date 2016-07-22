@@ -1,6 +1,12 @@
 CHANGES
 =======
 
+0.3.0
+-----
+
+- Added CoAP client functionality
+- Added Service Directory browser example
+
 0.2.0
 -----
 

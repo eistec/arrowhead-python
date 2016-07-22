@@ -39,12 +39,13 @@ class CoAPObserver(LogMixin, object):
         self.log.debug("options: {}".format(repr(request.opt)))
         try:
             response = yield from self.requester.response
-            # Pass the initial GET response to the observation handler as well
-            self.observation_handler(response)
-        except Exception as exc:
-            self.log.warning('Exception: {!r}'.format(exc))
+        except aiocoap.error.Error as exc:
+            self.log.warning('CoAP exception: %r', exc)
             if not self.requester.observation.cancelled:
+                self.log.warning('Cancelling observation %r', self.requester.observation)
                 self.requester.observation.cancel()
+        # Pass the initial GET response to the observation handler as well
+        yield from self.observation_handler(response)
         # The observation_is_over Future is only completed if the observation
         # stops for whatever reason
         exit_reason = yield from observation_is_over
@@ -65,6 +66,7 @@ class ServiceDirectoryBrowser(LogMixin, object):
         self.uri = uri
         self.observer = None
 
+    @asyncio.coroutine
     def browse_handler(self, response):
         """Handler for incoming responses to an active directory observation"""
         if not response.code.is_successful():
@@ -104,9 +106,23 @@ class ServiceDirectoryBrowser(LogMixin, object):
             request.opt.accept = aiocoap.numbers.media_types_rev['application/json']
             requester = self.context.request(request)
             self.log.debug("poll: %r, options: %r", request, request.opt)
-            response = yield from requester.response
+            try:
+                response = yield from asyncio.wait_for(requester.response, timeout=60.0)
+            except asyncio.TimeoutError:
+                # timed out waiting for server to respond
+                self.log.warning('Request timed out (60 s), retrying...')
+                continue
+            except ConnectionError as exc:
+                # connection refused etc.
+                self.log.warning('Connection error: %r, retrying in 15 s...', exc)
+                self.log.debug('Context: %r', self.context)
+                self.log.debug('Requester: %r', requester)
+                del self.context
+                self.context = yield from aiocoap.Context.create_client_context()
+                yield from asyncio.sleep(15.0)
+                continue
             # Pass the poll response to the observation handler
-            self.browse_handler(response)
+            yield from self.browse_handler(response)
             self.log.debug('ServiceRegistry: Sleeping')
             yield from asyncio.sleep(30.0) # magic number, wait 30 seconds before polling again
             self.log.debug('ServiceRegistry: Awake')

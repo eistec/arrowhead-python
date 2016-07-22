@@ -4,9 +4,6 @@
 import logging
 from logging import NullHandler
 
-from . import services
-from .services import Service
-
 class LogMixin(object):
     """Log mixin class
 
@@ -33,9 +30,21 @@ class LogMixin(object):
                 (self.__class__.__module__, self.__class__.__name__))
         self.log = logger or logging.getLogger(loggername)
 
+from . import services, coap
+from .services import Service
+from .coap import ServiceDirectoryBrowser, CoAPObserver
+
 # Set default logging handler to avoid "No handler found" warnings.
 logging.getLogger(__name__).addHandler(NullHandler())
 
 __version__ = '0.2.0'
 
-__all__ = ['Service', 'services', 'logging']
+__all__ = [
+    'Service',
+    'services',
+    'logging',
+    'LogMixin',
+    'coap',
+    'ServiceDirectoryBrowser',
+    'CoAPObserver',
+    ]

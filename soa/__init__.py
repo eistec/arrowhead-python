@@ -30,9 +30,9 @@ class LogMixin(object):
                 (self.__class__.__module__, self.__class__.__name__))
         self.log = logger or logging.getLogger(loggername)
 
-from . import services, coap
-from .services import Service
-from .coap import ServiceDirectoryBrowser, CoAPObserver
+from . import services, coap #pylint: disable=wrong-import-position
+from .services import Service #pylint: disable=wrong-import-position
+from .coap import ServiceDirectoryBrowser, CoAPObserver #pylint: disable=wrong-import-position
 
 # Set default logging handler to avoid "No handler found" warnings.
 logging.getLogger(__name__).addHandler(NullHandler())

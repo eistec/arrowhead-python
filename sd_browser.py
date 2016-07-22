@@ -16,6 +16,7 @@ loglevels = [logging.CRITICAL, logging.ERROR, logging.WARN, logging.INFO, loggin
 
 from soa import ServiceDirectoryBrowser
 
+@asyncio.coroutine
 def main(argv=None):
     """Program main entry point"""
     parser = argparse.ArgumentParser(argv)

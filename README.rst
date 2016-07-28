@@ -45,3 +45,4 @@ External dependencies
 - aiohttp - https://github.com/KeepSafe/aiohttp
 - link_header - https://bitbucket.org/asplake/link_header
 - blitzdb - https://github.com/adewes/blitzdb
+- attrs - https://pypi.python.org/pypi/attrs

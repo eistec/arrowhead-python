@@ -9,7 +9,6 @@ import asyncio
 # for pretty-printing the results
 from pprint import pprint
 
-@asyncio.coroutine
 def print_results(browser):
     pprint(browser.services, indent=4, width=160)
 

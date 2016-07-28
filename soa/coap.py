@@ -85,7 +85,7 @@ class ServiceDirectoryBrowser(LogMixin, object):
             name = srv.name
             self.services[name] = srv
         if self.notify is not None:
-            self.notify(self)
+            yield from self.notify(self)
 
     @asyncio.coroutine
     def start_observe(self):

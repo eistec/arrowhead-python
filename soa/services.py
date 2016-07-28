@@ -100,7 +100,7 @@ class Service(object):
                 props[jprop['name']] = jprop['value']
             except KeyError:
                 continue
-        return Service(properties=props, **attrs)
+        return cls(properties=props, **attrs)
 
     @classmethod
     def from_json(cls, payload):

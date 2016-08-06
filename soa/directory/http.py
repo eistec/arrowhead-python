@@ -192,22 +192,21 @@ class Server(LogMixin, web.Application):
             # bad input
             raise web.HTTPBadRequest(reason='Invalid data, expected service')
 
-        if not service['name']:
+        if not service.name:
             # bad input
             raise web.HTTPBadRequest(reason='Missing service name')
+        try:
+            self._directory.service(name=service.name)
+        except self._directory.DoesNotExist:
+            code = web.HTTPCreated.status_code
         else:
-            try:
-                self._directory.service(name=service.name)
-            except self._directory.DoesNotExist:
-                code = web.HTTPCreated.status_code
-            else:
-                code = web.HTTPOk.status_code
+            code = web.HTTPOk.status_code
 
-            self._directory.publish(service=service)
-            payload = 'Publish OK'
-            return web.Response(
-                body=payload.encode('utf-8'), status=code,
-                content_type='text/plain', charset='utf-8')
+        self._directory.publish(service=service)
+        payload = 'Publish OK'
+        return web.Response(
+            body=payload.encode('utf-8'), status=code,
+            content_type='text/plain', charset='utf-8')
 
     @asyncio.coroutine
     def unpublish_post(self, request):

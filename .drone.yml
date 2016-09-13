@@ -3,10 +3,10 @@ pipeline:
         image: eistec/arrowhead-ci-build:latest
         commands:
             - pip3 install -r requirements.txt -r requirements-tests.txt
-            - py.test --cov=soa --cov-report=term
+            - py.test --color=yes --cov=soa --cov-report=term
 
     run_pylint:
         image: eistec/arrowhead-ci-build:latest
         commands:
             - pip3 install -r requirements.txt -r requirements-tests.txt
-            - py.test --pylint soa
+            - py.test --color=yes --pylint soa

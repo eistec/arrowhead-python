@@ -18,6 +18,7 @@ class LogMixin(object):
             the class hierarchy
         :param logger: Logger object to store in self.log, a new object will be
             created if not provided
+        :type logger: logging.Logger
         :param loggername: If creating a new logger, use this name,
             default: _modulename.classname_
         :type loggername: str

@@ -188,7 +188,7 @@ class Server(LogMixin, web.Application):
             text = yield from request.text()
             self.log.debug('Service text: %s', text)
             service = handler(text)
-        except ValueError:
+        except (ValueError, LookupError):
             # bad input
             raise web.HTTPBadRequest(reason='Invalid data, expected service')
 

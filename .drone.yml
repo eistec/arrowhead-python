@@ -1,12 +1,27 @@
 pipeline:
     run_tests:
         image: eistec/arrowhead-ci-build:latest
+        environment:
+            - PYTEST_ADDOPTS=--color=yes
         commands:
             - pip3 install -r requirements.txt -r requirements-tests.txt
-            - py.test --color=yes --cov=soa --cov-report=term
+            - py.test --cov=soa --cov-report=term
+        when:
+            matrix:
+                STEP: test
 
     run_pylint:
         image: eistec/arrowhead-ci-build:latest
+        environment:
+            - PYTEST_ADDOPTS=--color=yes
         commands:
             - pip3 install -r requirements.txt -r requirements-tests.txt
-            - py.test --color=yes --pylint soa
+            - py.test --pylint soa
+        when:
+            matrix:
+                STEP: lint
+
+matrix:
+    STEP:
+        - test
+        - lint

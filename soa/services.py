@@ -355,4 +355,3 @@ def typelist_to_corelf(tlist, uri_base):
     """
     return link_header.format_links(
         [link_header.Link('{0}/{1}'.format(uri_base, t)) for t in tlist])
-

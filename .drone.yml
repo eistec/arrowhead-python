@@ -1,32 +1,28 @@
 pipeline:
+    install_deps:
+        image: ${IMAGE}
+        commands:
+            - pip3 install -r requirements.txt -r requirements-tests.txt
+
     unittests:
         image: ${IMAGE}
         environment:
             - PYTEST_ADDOPTS=--color=yes
         commands:
-            - pip3 install -r requirements.txt -r requirements-tests.txt
             - py.test --cov=soa --cov-report=term
-        when:
-            matrix:
-                STEP: unittests
 
     pylint:
         image: ${IMAGE}
         environment:
             - PYTEST_ADDOPTS=--color=yes
         commands:
-            - pip3 install -r requirements.txt -r requirements-tests.txt
             - py.test --pylint soa
         when:
             matrix:
                 # only need to run lint once
-                STEP: pylint
                 IMAGE: python:3.5
 
 matrix:
-    STEP:
-        - unittests
-        - pylint
     IMAGE:
         - python:3.4
         - python:3.5

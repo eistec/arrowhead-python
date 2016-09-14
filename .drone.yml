@@ -1,6 +1,6 @@
 pipeline:
-    run_tests:
-        image: eistec/arrowhead-ci-build:latest
+    unittests:
+        image: ${IMAGE}
         environment:
             - PYTEST_ADDOPTS=--color=yes
         commands:
@@ -8,10 +8,10 @@ pipeline:
             - py.test --cov=soa --cov-report=term
         when:
             matrix:
-                STEP: test
+                STEP: unittests
 
-    run_pylint:
-        image: eistec/arrowhead-ci-build:latest
+    pylint:
+        image: ${IMAGE}
         environment:
             - PYTEST_ADDOPTS=--color=yes
         commands:
@@ -19,9 +19,14 @@ pipeline:
             - py.test --pylint soa
         when:
             matrix:
-                STEP: lint
+                # only need to run lint once
+                STEP: pylint
+                IMAGE: python:3.5
 
 matrix:
     STEP:
-        - test
-        - lint
+        - unittests
+        - pylint
+    IMAGE:
+        - python:3.4
+        - python:3.5

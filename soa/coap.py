@@ -97,13 +97,13 @@ class ServiceDirectoryBrowser(LogMixin, object):
                     accept=aiocoap.numbers.media_types_rev['application/json'])
             yield from self.observer.start_observe()
         self.log.warning('Using polling because of missing Block2 Observation handler')
-        self.context = yield from aiocoap.Context.create_client_context()
+        context = yield from aiocoap.Context.create_client_context()
         self.log.info("Begin poll on '%s'", self.uri)
         while True:
             request = aiocoap.Message(code=aiocoap.numbers.codes.Code.GET)
             request.set_request_uri(self.uri)
             request.opt.accept = aiocoap.numbers.media_types_rev['application/json']
-            requester = self.context.request(request)
+            requester = context.request(request)
             self.log.debug("poll: %r, options: %r", request, request.opt)
             try:
                 response = yield from asyncio.wait_for(requester.response, timeout=60.0)
@@ -114,10 +114,9 @@ class ServiceDirectoryBrowser(LogMixin, object):
             except ConnectionError as exc:
                 # connection refused etc.
                 self.log.warning('Connection error: %r, retrying in 15 s...', exc)
-                self.log.debug('Context: %r', self.context)
+                self.log.debug('Context: %r', context)
                 self.log.debug('Requester: %r', requester)
-                del self.context
-                self.context = yield from aiocoap.Context.create_client_context()
+                context = yield from aiocoap.Context.create_client_context()
                 yield from asyncio.sleep(15.0)
                 continue
             # Pass the poll response to the observation handler

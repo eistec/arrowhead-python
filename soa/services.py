@@ -91,6 +91,7 @@ class Service(object):
 
         :param js_dict: JSON dict
         :type js_dict: dict
+        :returns: Service object
         """
         attrs = {key: js_dict.get(key, None) for key in SERVICE_ATTRIBUTES}
         props = {}
@@ -110,6 +111,7 @@ class Service(object):
 
         :param payload: JSON string representation of a service
         :type payload: string or bytes
+        :returns: Service object
         """
         try:
             try:
